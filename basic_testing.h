@@ -3,7 +3,7 @@
 
 #include <stdlib.h>
 #include <stdio.h>
-#include <stdint.h> 
+#include <stdint.h>
 
 #define ck_assert_msg(expr, ...) \
     if (!(expr)) { \
@@ -67,7 +67,7 @@ const test_descriptor * _Name ## _suite []
 		_Name ## _passed += 1;					\
 	    }								\
 	}								\
-} while (0) 
+} while (0)
 
 #define TEST_SUITE_PASS(_Name) (_Name ## _failed == 0)
 
@@ -76,4 +76,23 @@ const test_descriptor * _Name ## _suite []
     printf("Test suite "#_Name": pass %u/%u  ", _Name ## _passed, _Name ## _passed + _Name ## _failed); \
     } while(0)
 
-#endif
+static unsigned int tests_run_fail = 0;
+static unsigned int tests_run_pass = 0;
+
+#define RUN_TEST(_Name)						\
+    do {							\
+	if (!(_Name ->test_function())) {			\
+	    tests_run_fail += 1;				\
+	    fprintf(stderr, "Test %s failed\n", _Name ->name);	\
+	} else {						\
+	    tests_run_pass += 1;				\
+	}							\
+    } while (0)
+
+#define PRINT_TEST_RESULTS do { \
+	printf(" %u/%u  ", tests_run_pass, tests_run_pass + tests_run_fail); \
+    } while (0);
+
+#define ALL_TESTS_PASSED (tests_run_fail == 0)
+
+#endif /* BASIC_TESTING_H_INCLUDED */
