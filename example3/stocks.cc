@@ -1,0 +1,1 @@
+/home/carzanig/edu/sysprog/retake/stocks/stocks1.cc
