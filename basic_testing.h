@@ -61,8 +61,7 @@
 
 #ifdef __cplusplus
 #define BT_POSSIBLY_UNUSED [[maybe_unused]]
-#else
-#if defined(__GNUC__) || defined(__clang__)
+#elif defined(__GNUC__) || defined(__clang__)
 #define BT_POSSIBLY_UNUSED __attribute__((unused))
 #endif
 #ifndef BT_POSSIBLY_UNUSED
