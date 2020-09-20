@@ -62,11 +62,11 @@
 #ifdef __cplusplus
 #define BT_POSSIBLY_UNUSED [[maybe_unused]]
 #else
-#ifdef __GNUC__
+#if defined(__GNUC__) || defined(__clang__)
 #define BT_POSSIBLY_UNUSED __attribute__((unused))
-#else
-#define BT_POSSIBLY_UNUSED
 #endif
+#ifndef BT_POSSIBLY_UNUSED
+#define BT_POSSIBLY_UNUSED
 #endif
 
 /* Assertion checks
