@@ -108,7 +108,7 @@ $(TESTS_DIR)/%: $(TESTS_DIR)/%.c $(OBJECTS)
 	$(CC) $(CFLAGS) $(LDFLAGS) $(TESTS_DIR)/$*.c $(OBJECTS) -o $@
 
 $(TESTS_DIR)/%: $(TESTS_DIR)/%.cc $(OBJECTS)
-	$(CXX) $(CXXFLAGS) $(LDFLAGS) $(TESTS_DIR)/$*.cc $(OBJECTS) -o $@
+	$(CXX) -std=c++11 $(CXXFLAGS) $(LDFLAGS) $(TESTS_DIR)/$*.cc $(OBJECTS) -o $@
 
 .PHONY: check-bin
 check-bin: $(TESTS_BIN)
