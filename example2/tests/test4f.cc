@@ -155,4 +155,4 @@ TEST(infinite_loop) {
     TEST_FAILED;
 }
 
-MAIN_TEST_DRIVER
+MAIN_TEST_DRIVER();

@@ -52,5 +52,5 @@ TEST(good_and_bad_quantities) {
     TEST_PASSED;
 }
 
-MAIN_TEST_DRIVER
+MAIN_TEST_DRIVER()
 

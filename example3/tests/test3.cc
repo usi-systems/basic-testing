@@ -52,4 +52,4 @@ TEST(price_ranges) {
     TEST_PASSED;
 }
 
-MAIN_TEST_DRIVER
+MAIN_TEST_DRIVER()

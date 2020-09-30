@@ -120,4 +120,4 @@ TEST(large_low_high) {
     TEST_PASSED;
 }
 
-MAIN_TEST_DRIVER
+MAIN_TEST_DRIVER()

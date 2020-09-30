@@ -44,4 +44,4 @@ TEST(window_up_down) {
     TEST_PASSED;
 }
 
-MAIN_TEST_DRIVER
+MAIN_TEST_DRIVER()

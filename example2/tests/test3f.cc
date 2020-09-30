@@ -170,4 +170,4 @@ TEST(multi_reservation_specific_capacity2) {
     TEST_PASSED;
 }
 
-MAIN_TEST_DRIVER
+MAIN_TEST_DRIVER()
