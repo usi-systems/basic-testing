@@ -39,5 +39,5 @@ clean:
 	@for ex in $(EXAMPLES); do $(MAKE) -C $$ex clean; done
 
 veryclean: clean
-	fm -f $(HEADERS)
+	rm -f $(HEADERS)
 
