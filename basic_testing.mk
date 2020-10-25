@@ -62,7 +62,7 @@ check-io-sh: compile $(TESTS_IO) $(TESTS_SH)
 				rm -f "$$t.out" ;\
 			else \
 				echo "FAIL" ;\
-				echo "see $(TESTS_DIR)/$$t.sh" ;\
+				echo "see $(TESTS_DIR)/$$t.in" ;\
 				echo "run diff $$t.out $(TESTS_DIR)/$$t.expected";\
 				echo "to see the difference between the actual and expected output";\
 			fi; \
@@ -90,15 +90,30 @@ check-io-sh: compile $(TESTS_IO) $(TESTS_SH)
 		else \
 			kill $$killer_pid > /dev/null 2>&1 ;\
 			wait $$killer_pid; \
-			if cmp -s "$$t.out" "$(TESTS_DIR)/$$t.expected"; \
+			if test -r "$(TESTS_DIR)/$$t.expected"; \
 			then \
-				echo "PASS" ;\
-				rm -f "$$t.out" ;\
+				if cmp -s "$$t.out" "$(TESTS_DIR)/$$t.expected"; \
+				then \
+					echo "PASS" ;\
+					rm -f "$$t.out" ;\
+				else \
+					echo "FAIL" ;\
+					echo "see $(TESTS_DIR)/$$t.sh" ;\
+					echo "run diff $$t.out $(TESTS_DIR)/$$t.expected";\
+					echo "to see the difference between the actual and expected output";\
+				fi; \
 			else \
-				echo "FAIL" ;\
-				echo "see $(TESTS_DIR)/$$t.sh" ;\
-				echo "run diff $$t.out $(TESTS_DIR)/$$t.expected";\
-				echo "to see the difference between the actual and expected output";\
+				if test $$res = 0 ; \
+				then \
+					echo "PASS" ;\
+					rm -f "$$t.out" ;\
+				else \
+					echo "FAIL" ;\
+					echo "see $(TESTS_DIR)/$$t.sh" ;\
+					echo "you may run $(TESTS_DIR)/$$t.sh $$p" ;\
+					echo "to see what went wrong";\
+					rm -f "$$t.out" ;\
+				fi; \
 			fi; \
 		fi; \
 	done; \
