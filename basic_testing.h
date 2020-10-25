@@ -32,7 +32,13 @@
 #include <unistd.h>
 #include <sys/wait.h>
 #include <errno.h>
+
+#ifdef __has_include
+#if __has_include(<sys/resource.h>)
 #include <sys/resource.h>
+#define WITH_RUSAGE 1
+#endif
+#endif
 
 #ifdef __has_include
 #if __has_include(<valgrind.h>)
@@ -208,9 +214,11 @@ static int bt_run_test(const struct bt_test_descriptor * t) {
     /* Make sure the child starts with empty I/O buffers. */
     fflush(stdout);
     fflush(stderr);
+#ifdef WITH_RUSAGE
     struct rusage usage_before;
     struct rusage usage_after;
     getrusage(RUSAGE_CHILDREN, &usage_before);
+#endif
     pid = fork();
 
     if(pid == (pid_t)-1) {
@@ -225,8 +233,9 @@ static int bt_run_test(const struct bt_test_descriptor * t) {
 	/* Parent: Wait until child terminates and analyze its exit code. */
 	int exit_code;
 	waitpid(pid, &exit_code, 0);
-
+#ifdef WITH_RUSAGE
 	getrusage(RUSAGE_CHILDREN, &usage_after);
+#endif
 	if(WIFEXITED(exit_code)) {
 	    switch(WEXITSTATUS(exit_code)) {
 	    case BT_SUCCESS: return BT_SUCCESS;
@@ -246,10 +255,14 @@ static int bt_run_test(const struct bt_test_descriptor * t) {
 	    case SIGILL:  signame = "SIGILL"; break;
 	    case SIGTERM: signame = "SIGTERM"; break;
 	    case SIGALRM:
+#ifdef WITH_RUSAGE
 		if (usage_after.ru_utime.tv_sec - usage_before.ru_utime.tv_sec >= bt_timeout - 1)
 		    signame = "SIGALARM (timeout), infinite loop?";
 		else
 		    signame = "SIGALARM (timeout), stuck on input?";
+#else
+		signame = "SIGALARM (timeout)";
+#endif
 		break;
 	    default: signame = 0;
 	    }
