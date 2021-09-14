@@ -370,6 +370,12 @@ int bt_test_driver(int argc, char * argv[]) {
     return EXIT_ALL_TESTS_PASSED;
 }
 
+#ifdef __cplusplus
+#define MAIN_TEST_DRIVER(...)						\
+    int main(int argc, char * argv[]) {					\
+	return bt_test_driver(argc, argv);				\
+    }
+#else
 #define MAIN_TEST_DRIVER(...)						\
     int main(int argc, char * argv[]) {					\
 	struct bt_test_descriptor * suite [] = { __VA_ARGS__ };		\
@@ -378,5 +384,6 @@ int bt_test_driver(int argc, char * argv[]) {
 	    bt_add_test(suite[i]);					\
 	return bt_test_driver(argc, argv);				\
     }
+#endif
 
 #endif /* BASIC_TESTING_H_INCLUDED */
