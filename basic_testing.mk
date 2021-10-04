@@ -29,42 +29,53 @@ compile: $(PROGRAMS) $(OBJECTS)
 .PHONY: check
 check: check-bin check-io-sh
 
+PROGRAMS_EXT:=$(if $(WITH_VALGRIND),-valgrind,)
+PROGRAMS_DRIVERS:=$(foreach prog,$(PROGRAMS),$(dir $(prog))$(prog))
+
+%-valgrind: %
+	echo -e '#!/bin/sh\nexec valgrind -q "$*" $$@' > $@
+	chmod 755 $@
+
+
 .PHONY: check-io-sh
-check-io-sh: compile $(TESTS_IO) $(TESTS_SH)
+check-io-sh: compile $(TESTS_IO) $(TESTS_SH) $(PROGRAMS_DRIVERS)
 	@exec 2> /dev/null; \
-	for p in $(foreach prog,$(PROGRAMS),$(dir $(prog))$(prog)); do \
+	echo_ko () { echo "$$( tput setaf 1 ; tput bold )$$@$$( tput sgr0 ; tput setaf 0 )"; }; \
+	echo_ok () { echo "$$( tput setaf 2 ; tput bold )$$@$$( tput sgr0 ; tput setaf 0 )"; }; \
+	echo_diag () { test -z "$(TEST_DIAGNOSTICS)" && echo "$$@"; }; \
+	for p in $(PROGRAMS_DRIVERS); do \
 	echo "Testing $${p}:" ; \
 	for t in $(TESTS_IO_NAMES); do \
 		echo -n "Running test $$t... " ; \
 		"$$p" < "$(TESTS_DIR)/$$t.in"  > "$$t.out" 2>&1 & \
 		prog_pid=$$!; \
-		( sleep $(TIMEOUT); kill $$prog_pid > /dev/null 2>&1 ) & \
+		( sleep $(TIMEOUT); kill -KILL $$prog_pid > /dev/null 2>&1 ) & \
 		killer_pid=$$!; \
 		wait $$prog_pid; \
 		res=$$?; \
 		if test $$res -gt 128; \
 		then \
 			case `kill -l $$(($$res - 128))` in \
-				ABRT ) echo "FAIL"; ;; \
-				TERM ) echo "TIME OUT"; ;; \
-				* ) echo "UNKNOWN ERROR"; ;; \
+				ABRT ) echo_ko FAIL; ;; \
+				TERM ) echo_ko TIME OUT; ;; \
+				* ) echo_ko UNKNOWN ERROR; ;; \
 			esac ; \
-			echo "see $(TESTS_DIR)/$$t.in" ;\
-			echo "you may run $$p < $(TESTS_DIR)/$$t.in" ;\
-			echo "to see what went wrong";\
+			echo_diag "see $(TESTS_DIR)/$$t.in" ;\
+			echo_diag "you may run $$p < $(TESTS_DIR)/$$t.in" ;\
+			echo_diag "to see what went wrong";\
 			rm -f "$$t.out" ;\
 		else \
 			kill $$killer_pid > /dev/null 2>&1 ;\
 			wait $$killer_pid; \
 			if cmp -s "$$t.out" "$(TESTS_DIR)/$$t.expected"; \
 			then \
-				echo "PASS" ;\
+				echo_ok PASS ;\
 				rm -f "$$t.out" ;\
 			else \
-				echo "FAIL" ;\
-				echo "see $(TESTS_DIR)/$$t.in" ;\
-				echo "run diff $$t.out $(TESTS_DIR)/$$t.expected";\
-				echo "to see the difference between the actual and expected output";\
+				echo_ko FAIL ;\
+				echo_diag "see $(TESTS_DIR)/$$t.in" ;\
+				echo_diag "run diff $$t.out $(TESTS_DIR)/$$t.expected";\
+				echo_diag "to see the difference between the actual and expected output";\
 			fi; \
 		fi; \
 	done; \
@@ -79,13 +90,13 @@ check-io-sh: compile $(TESTS_IO) $(TESTS_SH)
 		if test $$res -gt 128; \
 		then \
 			case `kill -l $$(($$res - 128))` in \
-				ABRT ) echo "FAIL"; ;; \
-				TERM ) echo "TIME OUT"; ;; \
-				* ) echo "UNKNOWN ERROR"; ;; \
+				ABRT ) echo_ko FAIL; ;; \
+				TERM ) echo_ko TIME OUT; ;; \
+				* ) echo_ko UNKNOWN ERROR; ;; \
 			esac ; \
-			echo "see $(TESTS_DIR)/$$t.sh" ;\
-			echo "you may run $(TESTS_DIR)/$$t.sh $$p" ;\
-			echo "to see what went wrong";\
+			echo_diag "see $(TESTS_DIR)/$$t.sh" ;\
+			echo_diag "you may run $(TESTS_DIR)/$$t.sh $$p" ;\
+			echo_diag "to see what went wrong";\
 			rm -f "$$t.out" ;\
 		else \
 			kill $$killer_pid > /dev/null 2>&1 ;\
@@ -94,24 +105,24 @@ check-io-sh: compile $(TESTS_IO) $(TESTS_SH)
 			then \
 				if cmp -s "$$t.out" "$(TESTS_DIR)/$$t.expected"; \
 				then \
-					echo "PASS" ;\
+					echo_ok PASS ;\
 					rm -f "$$t.out" ;\
 				else \
-					echo "FAIL" ;\
-					echo "see $(TESTS_DIR)/$$t.sh" ;\
-					echo "run diff $$t.out $(TESTS_DIR)/$$t.expected";\
-					echo "to see the difference between the actual and expected output";\
+					echo_ko FAIL ;\
+					echo_diag "see $(TESTS_DIR)/$$t.sh" ;\
+					echo_diag "run diff $$t.out $(TESTS_DIR)/$$t.expected";\
+					echo_diag "to see the difference between the actual and expected output";\
 				fi; \
 			else \
 				if test $$res = 0 ; \
 				then \
-					echo "PASS" ;\
+					echo_ok PASS ;\
 					rm -f "$$t.out" ;\
 				else \
-					echo "FAIL" ;\
-					echo "see $(TESTS_DIR)/$$t.sh" ;\
-					echo "you may run $(TESTS_DIR)/$$t.sh $$p" ;\
-					echo "to see what went wrong";\
+					echo_ko FAIL ;\
+					echo_diag "see $(TESTS_DIR)/$$t.sh" ;\
+					echo_diag "you may run $(TESTS_DIR)/$$t.sh $$p" ;\
+					echo_diag "to see what went wrong";\
 					rm -f "$$t.out" ;\
 				fi; \
 			fi; \
@@ -128,9 +139,17 @@ $(TESTS_DIR)/%: $(TESTS_DIR)/%.cc $(OBJECTS)
 .PHONY: check-bin
 check-bin: $(TESTS_BIN)
 	@exec 2> /dev/null; \
+	echo_ko () { echo "$$( tput setaf 1 ; tput bold )$$@$$( tput sgr0 ; tput setaf 0 )"; }; \
+	echo_ok () { echo "$$( tput setaf 2 ; tput bold )$$@$$( tput sgr0 ; tput setaf 0 )"; }; \
+	all_tests_passed=yes; \
 	for t in $(TESTS_BIN_NAMES); do \
 		echo -n "Running test $$t... " ; \
-		"$(TESTS_DIR)/$$t" -q &\
+		if test -n "$(WITH_VALGRIND)"; then \
+			echo ;\
+			valgrind -q "$(TESTS_DIR)/$$t" 2>&1 &\
+		else \
+			"$(TESTS_DIR)/$$t" -q &\
+		fi; \
 		prog_pid=$$!; \
 		( sleep $(TIMEOUT); kill $$prog_pid > /dev/null 2>&1 ) & \
 		killer_pid=$$!; \
@@ -139,26 +158,27 @@ check-bin: $(TESTS_BIN)
 		if test $$res = 0; then \
 			kill $$killer_pid > /dev/null 2>&1 ;\
 			wait $$killer_pid; \
-			echo "PASS" ;\
+			echo_ok PASS ;\
 		else \
+			all_tests_passed=no; \
 			if test $$res -gt 128; \
 			then \
 				case `kill -l $$(($$res - 128))` in \
-					ABRT ) echo "FAIL"; ;; \
-					TERM ) echo "TIME OUT"; ;; \
-					* ) echo "UNKNOWN ERROR"; ;; \
+					ABRT ) echo_ko "FAIL"; ;; \
+					TERM ) echo_ko "TIME OUT"; ;; \
+					* ) echo_ko "UNKNOWN ERROR"; ;; \
 				esac ; \
 			else \
 				kill $$killer_pid > /dev/null 2>&1 ;\
 				wait $$killer_pid; \
 				echo "FAIL" ;\
 			fi; \
-			echo "run '$(TESTS_DIR)/$$t' to see what went wrong" ; \
-			echo "run '$(TESTS_DIR)/$$t -d' with a debugger" ; \
+			echo_diag "run '$(TESTS_DIR)/$$t' to see what went wrong" ; \
+			echo_diag "run '$(TESTS_DIR)/$$t -d' with a debugger" ; \
 		fi; \
 	done
 
 
 .PHONY: clean
 clean:
-	rm -f $(PROGRAMS) $(OBJECTS) tests/*.o $(TESTS_BIN)
+	rm -f $(PROGRAMS) *-valgrind $(OBJECTS) tests/*.o $(TESTS_BIN)
