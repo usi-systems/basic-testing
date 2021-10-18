@@ -1,11 +1,13 @@
 .PHONY: all
 all: all-examples
 
-EXAMPLES = example1 example2 example3 example4
+EXAMPLES = example1 example2 example3 example4 example5 example6 example7 example8
 HEADERS = example1/tests/basic_testing.h \
 	example2/tests/basic_testing.h \
 	example3/tests/basic_testing.h \
-	example4/tests/basic_testing.h 
+	example4/tests/basic_testing.h \
+	example5/tests/basic_testing.h \
+	example6/tests/basic_testing.h
 
 example%/tests/basic_testing.h: basic_testing.h
 	cp basic_testing.h $@
@@ -17,13 +19,13 @@ all-examples: $(HEADERS)
 	   $(MAKE) -C $$ex clean > /dev/null || test_result=FAIL; \
 	   $(MAKE) -C $$ex > $$ex.out || test_result=FAIL ; \
 	   if test -r $$ex.expected; \
-	   	then { while read l; \
-	   	       do if fgrep -q "$l" "$$ex.out"; \
-			  then : ; \
-	   		  else echo "$$ex.out must contain '$$l'"; \
-	   		       test_result=FAIL; \
-	   		  fi; \
-	   	       done; } < $$ex.expected || test_result=FAIL; \
+	   	then { IFS=''; while read l; \
+	   	        do if fgrep -q "$$l" "$$ex.out"; \
+			   then : ; \
+	   		   else echo "$$ex.out must contain '$$l'"; \
+	   		        test_result=FAIL; \
+	   		   fi; \
+	   	        done; } < $$ex.expected || test_result=FAIL; \
 	   fi; \
 	   if [ "$$test_result" = PASS ]; \
 	   then echo "$$ex PASS" ; \
