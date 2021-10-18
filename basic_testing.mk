@@ -8,16 +8,16 @@ TIMEOUT=8
 TESTS_DIR=tests
 
 TESTS_SH:=$(wildcard $(TESTS_DIR)/*.sh)
-TESTS_SH_NAMES:=$(patsubst $(TESTS_DIR)/%.sh, %, $(TESTS_SH))
+TESTS_SH_NAMES:=$(sort $(patsubst $(TESTS_DIR)/%.sh, %, $(TESTS_SH)))
 
 TESTS_IO:=$(wildcard $(TESTS_DIR)/*.in)
-TESTS_IO_NAMES:=$(patsubst $(TESTS_DIR)/%.in, %, $(TESTS_IO))
+TESTS_IO_NAMES:=$(sort $(patsubst $(TESTS_DIR)/%.in, %, $(TESTS_IO)))
 
 TESTS_C:=$(wildcard $(TESTS_DIR)/*.c)
 TESTS_CXX:=$(wildcard $(TESTS_DIR)/*.cc)
 TESTS_BIN:=$(patsubst $(TESTS_DIR)/%.c, $(TESTS_DIR)/%, $(TESTS_C)) \
 	   $(patsubst $(TESTS_DIR)/%.cc, $(TESTS_DIR)/%, $(TESTS_CXX))
-TESTS_BIN_NAMES:=$(patsubst $(TESTS_DIR)/%.c, %, $(TESTS_C)) $(patsubst $(TESTS_DIR)/%.cc, %, $(TESTS_CXX))
+TESTS_BIN_NAMES:=$(sort $(patsubst $(TESTS_DIR)/%.c, %, $(TESTS_C)) $(patsubst $(TESTS_DIR)/%.cc, %, $(TESTS_CXX)))
 
 .PHONY: all
 all: compile check
@@ -43,7 +43,7 @@ SUPPRESS_DIAGNOSTICS=yes
 else
 SUPPRESS_DIAGNOSTICS=
 endif
-SCRIPTS_UTILS := \
+SCRIPT_UTILS := \
 	echo_ko () { echo "$(shell tput setaf 1; tput bold)$$@$(shell tput sgr0 ; tput oc )"; }; \
 	echo_ok () { echo "$(shell tput setaf 2; tput bold)$$@$(shell tput sgr0 ; tput oc )"; }; \
 	echo_diag () { $(if $(SUPPRESS_DIAGNOSTICS),return,echo "$$@"); }
@@ -56,27 +56,46 @@ SCRIPT_GET_TEST_RESULT := \
 	res=$$?; \
 	if test $$res -gt 128; \
 	then \
-		case `kill -l $$(($$res - 128))` in \
+		sig=`kill -l $$(($$res - 128))`; \
+		case "$$sig" in \
 			ABRT ) echo_ko FAIL; ;; \
-			TERM ) echo_ko TIME OUT; ;; \
-			* ) echo_ko UNKNOWN ERROR; ;; \
+			TERM | KILL ) echo_ko TIME OUT; ;; \
+			* ) echo_ko ERROR "($$sig)"; ;; \
 		esac ; \
 		res=KO; \
 	else \
 		kill $$killer_pid > /dev/null 2>&1 ;\
 		wait $$killer_pid; \
-		res=OK; \
+		if test "$$res" = 0; \
+		then \
+			echo_ok PASS; \
+			res=OK; \
+		else \
+			echo_ko FAIL; \
+			res=KO; \
+		fi; \
 	fi
+
+SCRIPT_CHECK_ERR_FILE := \
+	if test -s "$$t.err"; \
+	then \
+		echo_diag "there were also errors ($$t.err):"; \
+		cat "$$t.err"; \
+	fi
+
+OUTPUT_LIMIT := 10M
+# SCRIPT_HANDLE_OUT_ERR_TEST := | head -c $(OUTPUT_LIMIT) > "$$t.out" |& tee "$$t.err"
+SCRIPT_HANDLE_OUT_ERR_TEST := > "$$t.out" 2>&1
 
 .PHONY: check-io-sh
 check-io-sh: compile $(TESTS_IO) $(TESTS_SH) $(PROGRAMS_DRIVERS)
 	@exec 2> /dev/null; \
-	$(SCRIPTS_UTILS); \
-	for p in $(PROGRAMS_DRIVERS); do \
+	$(SCRIPT_UTILS); \
+	for p in $(abspath $(PROGRAMS_DRIVERS)); do \
 	echo "Testing $${p}:" ; \
 	for t in $(TESTS_IO_NAMES); do \
 		echo -n "Running test $$t... " ; \
-		"$$p" < "$(TESTS_DIR)/$$t.in"  > "$$t.out" 2>&1 & \
+		"$$p" < "$(TESTS_DIR)/$$t.in" $(SCRIPT_HANDLE_OUT_ERR_TEST) &\
 		$(SCRIPT_GET_TEST_RESULT); \
 		if test "$$res" = KO; \
 		then \
@@ -87,7 +106,6 @@ check-io-sh: compile $(TESTS_IO) $(TESTS_SH) $(PROGRAMS_DRIVERS)
 		else \
 			if cmp -s "$$t.out" "$(TESTS_DIR)/$$t.expected"; \
 			then \
-				echo_ok PASS ;\
 				rm -f "$$t.out" ;\
 			else \
 				echo_ko FAIL ;\
@@ -96,21 +114,21 @@ check-io-sh: compile $(TESTS_IO) $(TESTS_SH) $(PROGRAMS_DRIVERS)
 				echo_diag "to see the difference between the actual and expected output";\
 			fi; \
 		fi; \
+		$(SCRIPT_CHECK_ERR_FILE); \
 	done; \
 	for t in $(TESTS_SH_NAMES); do \
 		echo -n "Running test $$t... " ; \
-		$(SHELL) "$(TESTS_DIR)/$$t.sh" "$$p" > "$$t.out" 2>&1 & \
+		$(SHELL) "$(TESTS_DIR)/$$t.sh" "$$p"  $(SCRIPT_HANDLE_OUT_ERR_TEST) &\
 		$(SCRIPT_GET_TEST_RESULT); \
 		if test "$$res" = KO; \
 		then \
 			echo_diag "see $(TESTS_DIR)/$$t.sh" ;\
 			echo_diag "you may run $(TESTS_DIR)/$$t.sh $$p" ;\
 			echo_diag "to see what went wrong";\
-			rm -f "$$t.out" ;\
+			rm -f "$$t.out";\
 		else \
 			if test ! -r "$(TESTS_DIR)/$$t.expected" || cmp -s "$$t.out" "$(TESTS_DIR)/$$t.expected"; \
 			then \
-				echo_ok PASS ;\
 				rm -f "$$t.out" ;\
 			else \
 				echo_ko FAIL ;\
@@ -119,6 +137,7 @@ check-io-sh: compile $(TESTS_IO) $(TESTS_SH) $(PROGRAMS_DRIVERS)
 				echo_diag "to see the difference between the actual and expected output";\
 			fi; \
 		fi; \
+		$(SCRIPT_CHECK_ERR_FILE); \
 	done; \
 	done
 
@@ -131,7 +150,7 @@ $(TESTS_DIR)/%: $(TESTS_DIR)/%.cc $(OBJECTS)
 .PHONY: check-bin
 check-bin: $(TESTS_BIN)
 	@exec 2> /dev/null; \
-	$(SCRIPTS_UTILS); \
+	$(SCRIPT_UTILS); \
 	for t in $(TESTS_BIN_NAMES); do \
 		echo -n "Running test $$t... " ; \
 		if test -n "$(WITH_VALGRIND)"; then \
@@ -141,9 +160,7 @@ check-bin: $(TESTS_BIN)
 			"$(TESTS_DIR)/$$t" -q &\
 		fi; \
 		$(SCRIPT_GET_TEST_RESULT); \
-		if test $$res = OK; then \
-			echo_ok PASS ;\
-		else \
+		if test $$res = KO; then \
 			echo_diag "run '$(TESTS_DIR)/$$t' to see what went wrong" ; \
 			echo_diag "run '$(TESTS_DIR)/$$t -d' with a debugger" ; \
 		fi; \
