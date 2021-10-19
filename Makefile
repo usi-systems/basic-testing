@@ -1,35 +1,30 @@
 .PHONY: all
 all: all-examples
 
-EXAMPLES = example1 example2 example3 example4 example5 example6 example7 example8
-HEADERS = example1/tests/basic_testing.h \
-	example2/tests/basic_testing.h \
-	example3/tests/basic_testing.h \
-	example4/tests/basic_testing.h \
-	example5/tests/basic_testing.h \
-	example6/tests/basic_testing.h
-
-example%/tests/basic_testing.h: basic_testing.h
-	cp basic_testing.h $@
+EXAMPLES = ex/example1 ex/example2 ex/example3 ex/example4 \
+	ex/example5 ex/example6 ex/example7 ex/example8 \
+	'ex ws/example1 ws' 'ex ws/example2 ws' 'ex ws/example3 ws' 'ex ws/example4 ws' \
+	'ex ws/example5 ws' 'ex ws/example6 ws' 'ex ws/example7 ws' 'ex ws/example8 ws'
 
 .PHONY: all-examples
-all-examples: $(HEADERS)
+all-examples:
 	@for ex in $(EXAMPLES); \
 	do test_result=PASS; \
-	   $(MAKE) -C $$ex clean > /dev/null || test_result=FAIL; \
-	   $(MAKE) -C $$ex > $$ex.out || test_result=FAIL ; \
-	   if test -r $$ex.expected; \
+	   cp -ai basic_testing.h "$$ex"/tests ;\
+	   $(MAKE) -C "$$ex" clean > /dev/null || test_result=FAIL; \
+	   $(MAKE) -C "$$ex" > "$$ex".out || test_result=FAIL ; \
+	   if test -r "$$ex".expected; \
 	   	then { IFS=''; while read l; \
-	   	        do if fgrep -q "$$l" "$$ex.out"; \
+	   	        do if fgrep -q "$$l" "$$ex".out; \
 			   then : ; \
 	   		   else echo "$$ex.out must contain '$$l'"; \
 	   		        test_result=FAIL; \
 	   		   fi; \
-	   	        done; } < $$ex.expected || test_result=FAIL; \
+	   	        done; } < "$$ex".expected || test_result=FAIL; \
 	   fi; \
 	   if [ "$$test_result" = PASS ]; \
 	   then echo "$$ex PASS" ; \
-	        rm -f $$ex.out; \
+	        rm -f "$$ex".out; \
 	   else echo  "$$ex FAIL" ; \
 	        echo "check $$ex.out and $$ex.expected to see what went wrong"; \
 	   fi; \
@@ -38,8 +33,8 @@ all-examples: $(HEADERS)
 .PHONY: clean veryclean
 clean:
 	rm -f *.out
-	@for ex in $(EXAMPLES); do $(MAKE) -C $$ex clean; done
+	@for ex in $(EXAMPLES); do $(MAKE) -C "$$ex" clean; done
 
 veryclean: clean
-	rm -f $(HEADERS)
+	for ex in $(EXAMPLES); do rm -f "$$ex"/tests/basic_testing.h; done
 

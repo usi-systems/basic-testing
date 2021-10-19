@@ -32,6 +32,7 @@ check: check-bin check-io-sh
 WITH_VALGRIND :=
 
 PROGRAMS_DRIVERS := $(foreach prog,$(PROGRAMS),$(prog)$(if $(WITH_VALGRIND),-valgrind,))
+PROGRAMS_CWD := $(shell pwd)
 
 %-valgrind: %
 	echo -e '#!/bin/sh\nexec valgrind -q "$*" $$@' > $@
@@ -91,11 +92,11 @@ SCRIPT_HANDLE_OUT_ERR_TEST := > "$$t.out" 2>&1
 check-io-sh: compile $(TESTS_IO) $(TESTS_SH) $(PROGRAMS_DRIVERS)
 	@exec 2> /dev/null; \
 	$(SCRIPT_UTILS); \
-	for p in $(abspath $(PROGRAMS_DRIVERS)); do \
+	for p in $(PROGRAMS_DRIVERS); do \
 	echo "Testing $${p}:" ; \
 	for t in $(TESTS_IO_NAMES); do \
 		echo -n "Running test $$t... " ; \
-		"$$p" < "$(TESTS_DIR)/$$t.in" $(SCRIPT_HANDLE_OUT_ERR_TEST) &\
+		"$(PROGRAMS_CWD)/$$p" < "$(TESTS_DIR)/$$t.in" $(SCRIPT_HANDLE_OUT_ERR_TEST) &\
 		$(SCRIPT_GET_TEST_RESULT); \
 		if test "$$res" = KO; \
 		then \
@@ -118,7 +119,7 @@ check-io-sh: compile $(TESTS_IO) $(TESTS_SH) $(PROGRAMS_DRIVERS)
 	done; \
 	for t in $(TESTS_SH_NAMES); do \
 		echo -n "Running test $$t... " ; \
-		$(SHELL) "$(TESTS_DIR)/$$t.sh" "$$p"  $(SCRIPT_HANDLE_OUT_ERR_TEST) &\
+		$(SHELL) "$(TESTS_DIR)/$$t.sh" "$(PROGRAMS_CWD)/$$p"  $(SCRIPT_HANDLE_OUT_ERR_TEST) &\
 		$(SCRIPT_GET_TEST_RESULT); \
 		if test "$$res" = KO; \
 		then \
