@@ -80,7 +80,6 @@ SCRIPT_GET_TEST_RESULT := \
 		wait $$killer_pid; \
 		if test "$$res" = 0; \
 		then \
-			echo_ok PASS; \
 			res=OK; \
 		else \
 			echo_ko FAIL; \
@@ -118,6 +117,7 @@ check-io-sh: compile $(TESTS_IO) $(TESTS_SH) $(PROGRAMS_DRIVERS)
 		else \
 			if cmp -s "$$t.out" "$(TESTS_DIR)/$$t.expected"; \
 			then \
+				echo_ok PASS; \
 				rm -f "$$t.out" ;\
 			else \
 				echo_ko FAIL ;\
@@ -141,6 +141,7 @@ check-io-sh: compile $(TESTS_IO) $(TESTS_SH) $(PROGRAMS_DRIVERS)
 		else \
 			if test ! -r "$(TESTS_DIR)/$$t.expected" || cmp -s "$$t.out" "$(TESTS_DIR)/$$t.expected"; \
 			then \
+				echo_ok PASS; \
 				rm -f "$$t.out" ;\
 			else \
 				echo_ko FAIL ;\
@@ -175,6 +176,8 @@ check-bin: $(TESTS_BIN)
 		if test $$res = KO; then \
 			echo_diag "run '$(TESTS_DIR)/$$t' to see what went wrong" ; \
 			echo_diag "run '$(TESTS_DIR)/$$t -d' with a debugger" ; \
+		else \
+			echo_ok PASS; \
 		fi; \
 	done
 
