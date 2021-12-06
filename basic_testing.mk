@@ -44,9 +44,20 @@ SUPPRESS_DIAGNOSTICS=yes
 else
 SUPPRESS_DIAGNOSTICS=
 endif
+TEST_COLORS=yes
+ifeq ($(TEST_COLORS),no)
+COLOR_RED :=
+COLOR_GREEN :=
+COLOR_NORMAL :=
+else
+COLOR_RED := $(shell tput setaf 1; tput bold)
+COLOR_GREEN := $(shell tput setaf 2; tput bold)
+COLOR_NORMAL := $(shell tput sgr0 ; tput oc )
+endif
+
 SCRIPT_UTILS := \
-	echo_ko () { echo "$(shell tput setaf 1; tput bold)$$@$(shell tput sgr0 ; tput oc )"; }; \
-	echo_ok () { echo "$(shell tput setaf 2; tput bold)$$@$(shell tput sgr0 ; tput oc )"; }; \
+	echo_ko () { echo "$(COLOR_RED)$$@$(COLOR_NORMAL)"; }; \
+	echo_ok () { echo "$(COLOR_GREEN)$$@$(COLOR_NORMAL)"; }; \
 	echo_diag () { $(if $(SUPPRESS_DIAGNOSTICS),return,echo "$$@"); }
 
 SCRIPT_GET_TEST_RESULT := \
