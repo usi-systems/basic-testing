@@ -95,8 +95,10 @@
 	const char * x_ = (X);						\
 	const char * y_ = (Y);						\
 	if (!(strcmp(x_, y_) OP 0)) {					\
-	    printf("\n%s:%d: Assertion '"#X" "#OP" "#Y"' failed: "#X" == %s, "#Y" == %s\n", \
-		   __FILE__, __LINE__, x_, y_);				\
+	    const char * X_str = #X;					\
+	    const char * Y_str = #Y;					\
+	    printf("\n%s:%d: Assertion '%s "#OP" %s' failed: %s == %s, %s == %s\n", \
+		   __FILE__, __LINE__, X_str, Y_str, X_str, x_, Y_str, y_); \
 	    TEST_FAILED;						\
 	}								\
     } while (0)
@@ -126,22 +128,26 @@
 
 #else
 
-#define CHECK_UINT_CMP(X,OP,Y) do {					\
+#define CHECK_INT_CMP(X,OP,Y) do {					\
 	intmax_t x_ = (X);						\
 	intmax_t y_ = (Y);						\
 	if (!(x_ OP y_)) {						\
-	    printf("\n%s:%d: Assertion '"#X" "#OP" "#Y"' failed: "#X" == %ju, "#Y" == %ju\n", \
-		   __FILE__, __LINE__, x_, y_);				\
+	    const char * X_str = #X;					\
+	    const char * Y_str = #Y;					\
+	    printf("\n%s:%d: Assertion '%s "#OP" %s' failed: %s == %jd, %s == %jd\n", \
+		   __FILE__, __LINE__, X_str, Y_str, X_str, x_, Y_str, y_); \
 	    TEST_FAILED;						\
 	}								\
     } while (0)
 
-#define CHECK_INT_CMP(X,OP,Y) do {					\
+#define CHECK_UINT_CMP(X,OP,Y) do {					\
 	uintmax_t x_ = (X);						\
 	uintmax_t y_ = (Y);						\
 	if (!(x_ OP y_)) {						\
-	    printf("\n%s:%d: Assertion '"#X" "#OP" "#Y"' failed: "#X" == %jd, "#Y" == %jd\n", \
-		   __FILE__, __LINE__, x_, y_);				\
+	    const char * X_str = #X;					\
+	    const char * Y_str = #Y;					\
+	    printf("\n%s:%d: Assertion '%s "#OP" %s' failed: %s == %ju, %s == %ju\n", \
+		   __FILE__, __LINE__, X_str, Y_str, X_str, x_, Y_str, y_); \
 	    TEST_FAILED;						\
 	}								\
     } while (0)
@@ -150,8 +156,10 @@
 	double x_ = (X);						\
 	double y_ = (Y);						\
 	if (!(x_ OP y_)) {						\
-	    printf("\n%s:%d: Assertion '"#X" "#OP" "#Y"' failed: "#X" == %f, "#Y" == %f\n", \
-		   __FILE__, __LINE__, x_, y_);				\
+	    const char * X_str = #X;					\
+	    const char * Y_str = #Y;					\
+	    printf("\n%s:%d: Assertion '%s "#OP" %s' failed: %s == %lf, %s == %lf\n", \
+		   __FILE__, __LINE__, X_str, Y_str, X_str, x_, Y_str, y_); \
 	    TEST_FAILED;						\
 	}								\
     } while (0)
