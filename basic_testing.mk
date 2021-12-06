@@ -35,7 +35,7 @@ PROGRAMS_DRIVERS := $(foreach prog,$(PROGRAMS),$(prog)$(if $(WITH_VALGRIND),-val
 PROGRAMS_CWD := $(shell pwd)
 
 %-valgrind: %
-	echo -e '#!/bin/sh\nexec valgrind -q "$*" $$@' > $@
+	echo -e '#!/bin/sh\nexec valgrind -q "./$*" $$@' > $@
 	chmod 755 $@
 
 TEST_DIAGNOSTICS=yes
