@@ -29,8 +29,7 @@ TEST(add_rooms_one) {
     r.floor = 0;
     r.number = 0;
     r.capacity = 1;
-    room * begin = &r;
-    add_rooms(begin, begin + 1);
+    add_rooms(&r, &r + 1);
     clear();
     TEST_PASSED;
 }
