@@ -82,7 +82,7 @@
  */
 #define CHECK(expr) do {					\
 	if (!(expr)) {						\
-	    printf("%s:%d: Assertion '"#expr"' failed\n",	\
+	    printf("\n%s:%d: Assertion '"#expr"' failed\n",	\
 		   __FILE__, __LINE__);				\
 	    TEST_FAILED;					\
 	}							\
