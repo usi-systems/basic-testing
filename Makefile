@@ -10,7 +10,7 @@ EXAMPLES = ex/example1 ex/example2 ex/example3 ex/example4 \
 all-examples:
 	@for ex in $(EXAMPLES); \
 	do test_result=PASS; \
-	   cp -ai basic_testing.h "$$ex"/tests ;\
+	   cp -a basic_testing.h "$$ex"/tests ;\
 	   $(MAKE) -C "$$ex" clean > /dev/null || test_result=FAIL; \
 	   $(MAKE) -C "$$ex" TEST_COLORS=no > "$$ex".out || test_result=FAIL ; \
 	   if test -r "$$ex".expected; \
