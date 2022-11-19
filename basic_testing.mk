@@ -56,6 +56,7 @@ COLOR_NORMAL := $(shell tput sgr0 ; tput oc )
 endif
 
 SCRIPT_UTILS := \
+	echo_test () { printf "Running test %-40s" "$$@... "; }; \
 	echo_ko () { echo "$(COLOR_RED)$$@$(COLOR_NORMAL)"; }; \
 	echo_ok () { echo "$(COLOR_GREEN)$$@$(COLOR_NORMAL)"; }; \
 	echo_diag () { $(if $(SUPPRESS_DIAGNOSTICS),return,echo "$$@"); }
@@ -105,7 +106,7 @@ check-io-sh: compile $(TESTS_IO) $(TESTS_SH) $(PROGRAMS_DRIVERS)
 	for p in $(PROGRAMS_DRIVERS); do \
 	echo "Testing $${p}:" ; \
 	for t in $(TESTS_IO_NAMES); do \
-		echo -n "Running test $$t... " ; \
+		echo_test "$$t"; \
 		"$(PROGRAMS_CWD)/$$p" < "$(TESTS_DIR)/$$t.in" $(SCRIPT_HANDLE_OUT_ERR_TEST) &\
 		$(SCRIPT_GET_TEST_RESULT); \
 		if test "$$res" = KO; \
@@ -129,7 +130,7 @@ check-io-sh: compile $(TESTS_IO) $(TESTS_SH) $(PROGRAMS_DRIVERS)
 		$(SCRIPT_CHECK_ERR_FILE); \
 	done; \
 	for t in $(TESTS_SH_NAMES); do \
-		echo -n "Running test $$t... " ; \
+		echo_test "$$t"; \
 		$(SHELL) "$(TESTS_DIR)/$$t.sh" "$(PROGRAMS_CWD)/$$p"  $(SCRIPT_HANDLE_OUT_ERR_TEST) &\
 		$(SCRIPT_GET_TEST_RESULT); \
 		if test "$$res" = KO; \
@@ -165,7 +166,7 @@ check-bin: $(TESTS_BIN)
 	@exec 2> /dev/null; \
 	$(SCRIPT_UTILS); \
 	for t in $(TESTS_BIN_NAMES); do \
-		echo -n "Running test $$t... " ; \
+		echo_test "$$t"; \
 		if test -n "$(WITH_VALGRIND)"; then \
 			echo ;\
 			valgrind -q "$(TESTS_DIR)/$$t" 2>&1 &\
