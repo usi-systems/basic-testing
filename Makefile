@@ -17,7 +17,7 @@ all-examples:
 	   	then { IFS=''; while read l; \
 	   	        do if fgrep -q "$$l" "$$ex".out; \
 			   then : ; \
-	   		   else echo "$$ex.out must contain '$$l'"; \
+	   		   else echo "'$$ex.out' must contain '$$l'"; \
 	   		        test_result=FAIL; \
 	   		   fi; \
 	   	        done; } < "$$ex".expected || test_result=FAIL; \
@@ -26,14 +26,14 @@ all-examples:
 	   then echo "$$ex PASS" ; \
 	        rm -f "$$ex".out; \
 	   else echo  "$$ex FAIL" ; \
-	        echo "check $$ex.out and $$ex.expected to see what went wrong"; \
+	        echo "check '$$ex.out' and '$$ex.expected' to see what went wrong"; \
 	   fi; \
 	done
 
 .PHONY: clean veryclean
 clean:
 	rm -f *.out
-	@for ex in $(EXAMPLES); do $(MAKE) -C "$$ex" clean; done
+	@for ex in $(EXAMPLES); do $(MAKE) -C "$$ex" clean; rm -f "$$ex.out"; done
 
 veryclean: clean
 	for ex in $(EXAMPLES); do rm -f "$$ex"/tests/basic_testing.h; done
