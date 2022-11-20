@@ -55,11 +55,30 @@ COLOR_GREEN := $(shell tput setaf 2; tput bold)
 COLOR_NORMAL := $(shell tput sgr0 ; tput oc )
 endif
 
-SCRIPT_UTILS := \
-	echo_test () { printf "Running test %-40s" "$$@... "; }; \
-	echo_ko () { echo "$(COLOR_RED)$$@$(COLOR_NORMAL)"; }; \
-	echo_ok () { echo "$(COLOR_GREEN)$$@$(COLOR_NORMAL)"; }; \
-	echo_diag () { $(if $(SUPPRESS_DIAGNOSTICS),return,echo "$$@"); }
+SCRIPT_INIT := \
+	count_total=0; \
+	count_pass=0; \
+	test_start () { \
+		count_total=`expr $$count_total + 1`; \
+		printf "Running test %-40s" "$$@... "; \
+	}; \
+	test_ko () { \
+		echo "$(COLOR_RED)$$@$(COLOR_NORMAL)"; \
+	}; \
+	test_ok () { \
+		count_pass=`expr $$count_pass + 1`; \
+		echo "$(COLOR_GREEN)$$@$(COLOR_NORMAL)"; \
+	}; \
+	test_diag () { \
+		$(if $(SUPPRESS_DIAGNOSTICS),return,echo "$$@"); \
+	}; \
+	test_summary () { \
+		test $$count_total = 0 && return; \
+		printf "count_total=%d count_pass=%d\n" "$$count_pass" "$$count_total"; \
+		printf "$$@ %d%% (%d/%d)\n" \
+			`expr 100 \* $$count_pass / $$count_total` \
+			"$$count_pass" "$$count_total"; \
+	}
 
 SCRIPT_GET_TEST_RESULT := \
 	prog_pid=$$!; \
@@ -71,9 +90,9 @@ SCRIPT_GET_TEST_RESULT := \
 	then \
 		sig=`kill -l $$(($$res - 128))`; \
 		case "$$sig" in \
-			ABRT ) echo_ko FAIL; ;; \
-			TERM | KILL ) echo_ko TIME OUT; ;; \
-			* ) echo_ko ERROR "($$sig)"; ;; \
+			ABRT ) test_ko FAIL; ;; \
+			TERM | KILL ) test_ko TIME OUT; ;; \
+			* ) test_ko ERROR "($$sig)"; ;; \
 		esac ; \
 		res=KO; \
 	else \
@@ -83,7 +102,7 @@ SCRIPT_GET_TEST_RESULT := \
 		then \
 			res=OK; \
 		else \
-			echo_ko FAIL; \
+			test_ko FAIL; \
 			res=KO; \
 		fi; \
 	fi
@@ -91,7 +110,7 @@ SCRIPT_GET_TEST_RESULT := \
 SCRIPT_CHECK_ERR_FILE := \
 	if test -s "$$t.err"; \
 	then \
-		echo_diag "there were also errors ($$t.err):"; \
+		test_diag "there were also errors ($$t.err):"; \
 		cat "$$t.err"; \
 	fi
 
@@ -102,58 +121,59 @@ SCRIPT_HANDLE_OUT_ERR_TEST := > "$$t.out" 2>&1
 .PHONY: check-io-sh
 check-io-sh: compile $(TESTS_IO) $(TESTS_SH) $(PROGRAMS_DRIVERS)
 	@exec 2> /dev/null; \
-	$(SCRIPT_UTILS); \
+	$(SCRIPT_INIT); \
 	for p in $(PROGRAMS_DRIVERS); do \
 	echo "Testing $${p}:" ; \
 	for t in $(TESTS_IO_NAMES); do \
-		echo_test "$$t"; \
+		test_start "$$t"; \
 		"$(PROGRAMS_CWD)/$$p" < "$(TESTS_DIR)/$$t.in" $(SCRIPT_HANDLE_OUT_ERR_TEST) &\
 		$(SCRIPT_GET_TEST_RESULT); \
 		if test "$$res" = KO; \
 		then \
-			echo_diag "see $(TESTS_DIR)/$$t.in" ;\
-			echo_diag "you may run $$p < $(TESTS_DIR)/$$t.in" ;\
-			echo_diag "to see what went wrong";\
+			test_diag "see $(TESTS_DIR)/$$t.in" ;\
+			test_diag "you may run $$p < $(TESTS_DIR)/$$t.in" ;\
+			test_diag "to see what went wrong";\
 			rm -f "$$t.out" ;\
 		else \
 			if cmp -s "$$t.out" "$(TESTS_DIR)/$$t.expected"; \
 			then \
-				echo_ok PASS; \
+				test_ok PASS; \
 				rm -f "$$t.out" ;\
 			else \
-				echo_ko FAIL ;\
-				echo_diag "see $(TESTS_DIR)/$$t.in" ;\
-				echo_diag "run diff $$t.out $(TESTS_DIR)/$$t.expected";\
-				echo_diag "to see the difference between the actual and expected output";\
+				test_ko FAIL ;\
+				test_diag "see $(TESTS_DIR)/$$t.in" ;\
+				test_diag "run diff $$t.out $(TESTS_DIR)/$$t.expected";\
+				test_diag "to see the difference between the actual and expected output";\
 			fi; \
 		fi; \
 		$(SCRIPT_CHECK_ERR_FILE); \
 	done; \
 	for t in $(TESTS_SH_NAMES); do \
-		echo_test "$$t"; \
+		test_start "$$t"; \
 		$(SHELL) "$(TESTS_DIR)/$$t.sh" "$(PROGRAMS_CWD)/$$p"  $(SCRIPT_HANDLE_OUT_ERR_TEST) &\
 		$(SCRIPT_GET_TEST_RESULT); \
 		if test "$$res" = KO; \
 		then \
-			echo_diag "see $(TESTS_DIR)/$$t.sh" ;\
-			echo_diag "you may run $(TESTS_DIR)/$$t.sh $$p" ;\
-			echo_diag "to see what went wrong";\
+			test_diag "see $(TESTS_DIR)/$$t.sh" ;\
+			test_diag "you may run /bin/sh $(TESTS_DIR)/$$t.sh $$p" ;\
+			test_diag "to see what went wrong";\
 			rm -f "$$t.out";\
 		else \
 			if test ! -r "$(TESTS_DIR)/$$t.expected" || cmp -s "$$t.out" "$(TESTS_DIR)/$$t.expected"; \
 			then \
-				echo_ok PASS; \
+				test_ok PASS; \
 				rm -f "$$t.out" ;\
 			else \
-				echo_ko FAIL ;\
-				echo_diag "see $(TESTS_DIR)/$$t.sh" ;\
-				echo_diag "run diff $$t.out $(TESTS_DIR)/$$t.expected";\
-				echo_diag "to see the difference between the actual and expected output";\
+				test_ko FAIL ;\
+				test_diag "see $(TESTS_DIR)/$$t.sh" ;\
+				test_diag "run diff $$t.out $(TESTS_DIR)/$$t.expected";\
+				test_diag "to see the difference between the actual and expected output";\
 			fi; \
 		fi; \
 		$(SCRIPT_CHECK_ERR_FILE); \
 	done; \
-	done
+	done; \
+	test_summary 'Summary: PASS '
 
 $(TESTS_DIR)/%: $(TESTS_DIR)/%.c $(OBJECTS)
 	$(CC) $(CFLAGS) $(LDFLAGS) $(TESTS_DIR)/$*.c $(OBJECTS) -o $@
@@ -164,9 +184,9 @@ $(TESTS_DIR)/%: $(TESTS_DIR)/%.cc $(OBJECTS)
 .PHONY: check-bin
 check-bin: $(TESTS_BIN)
 	@exec 2> /dev/null; \
-	$(SCRIPT_UTILS); \
+	$(SCRIPT_INIT); \
 	for t in $(TESTS_BIN_NAMES); do \
-		echo_test "$$t"; \
+		test_start "$$t"; \
 		if test -n "$(WITH_VALGRIND)"; then \
 			echo ;\
 			valgrind -q "$(TESTS_DIR)/$$t" 2>&1 &\
@@ -175,13 +195,13 @@ check-bin: $(TESTS_BIN)
 		fi; \
 		$(SCRIPT_GET_TEST_RESULT); \
 		if test $$res = KO; then \
-			echo_diag "run '$(TESTS_DIR)/$$t' to see what went wrong" ; \
-			echo_diag "run '$(TESTS_DIR)/$$t -d' with a debugger" ; \
+			test_diag "run '$(TESTS_DIR)/$$t' to see what went wrong" ; \
+			test_diag "run '$(TESTS_DIR)/$$t -d' with a debugger" ; \
 		else \
-			echo_ok PASS; \
+			test_ok PASS; \
 		fi; \
-	done
-
+	done; \
+	test_summary 'Summary: PASS '
 
 .PHONY: clean
 clean:
