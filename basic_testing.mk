@@ -74,7 +74,7 @@ SCRIPT_INIT := \
 	}; \
 	test_summary () { \
 		test $$count_total = 0 && return; \
-		printf "count_total=%d count_pass=%d\n" "$$count_pass" "$$count_total"; \
+		printf "count_total=%d count_pass=%d\n" "$$count_total" "$$count_pass"; \
 		printf "$$@ %d%% (%d/%d)\n" \
 			`expr 100 \* $$count_pass / $$count_total` \
 			"$$count_pass" "$$count_total"; \
