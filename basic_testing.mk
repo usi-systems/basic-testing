@@ -1,5 +1,7 @@
-CFLAGS=-Wall -g
-CXXFLAGS=-Wall -g
+CFLAGS=-Wall -g $(COVERAGE_FLAGS)
+CXXFLAGS=-Wall -g $(COVERAGE_FLAGS)
+
+COVERAGE_FLAGS=$(if $(WITH_COVERAGE),--coverage,)
 
 SHELL=/bin/bash
 
@@ -205,4 +207,10 @@ check-bin: $(TESTS_BIN)
 
 .PHONY: clean
 clean:
-	rm -f $(PROGRAMS) *-valgrind $(OBJECTS) tests/*.o $(TESTS_BIN)
+	rm -f $(PROGRAMS) *-valgrind $(OBJECTS) tests/*.o $(TESTS_BIN) \
+		*.gcov *.gcda  *.gcno tests/*.gcov tests/*.gcda  tests/*.gcno
+
+.PHONY: coverage
+coverage:
+	$(MAKE) clean all WITH_COVERAGE=yes
+	gcov -r $(patsubst %, %.c*, $(PROGRAMS)) $(patsubst %.o, %.c*, $(OBJECTS))
