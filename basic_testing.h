@@ -229,10 +229,10 @@ static int bt_run_test(const struct bt_test_descriptor * t) {
 #endif
     pid = fork();
 
-    if(pid == (pid_t)-1) {
+    if (pid == (pid_t)-1) {
 	printf("Cannot fork test %s. %s [%d]\n", t->name, strerror(errno), errno);
 	return BT_FAILURE;
-    } else if(pid == 0) {
+    } else if (pid == 0) {
 	/* Child: Do the test. */
 	if (bt_timeout > 0)
 	    alarm(bt_timeout);
@@ -244,16 +244,16 @@ static int bt_run_test(const struct bt_test_descriptor * t) {
 #ifdef WITH_RUSAGE
 	getrusage(RUSAGE_CHILDREN, &usage_after);
 #endif
-	if(WIFEXITED(exit_code)) {
-	    switch(WEXITSTATUS(exit_code)) {
+	if (WIFEXITED(exit_code)) {
+	    switch (WEXITSTATUS(exit_code)) {
 	    case BT_SUCCESS: return BT_SUCCESS;
 	    case BT_FAILURE: break;
 	    default:  printf("Unexpected exit code [%d]", WEXITSTATUS(exit_code));
 	    }
-	} else if(WIFSIGNALED(exit_code)) {
+	} else if (WIFSIGNALED(exit_code)) {
 	    const char* signame;
 	    int sig = WTERMSIG(exit_code);
-	    switch(sig) {
+	    switch (sig) {
 	    case SIGINT:  signame = "SIGINT"; break;
 	    case SIGHUP:  signame = "SIGHUP"; break;
 	    case SIGQUIT: signame = "SIGQUIT"; break;
@@ -341,7 +341,7 @@ int bt_test_names_argc = -1;
 
 BT_POSSIBLY_UNUSED
 void bt_parse_args(int argc, char * argv []) {
-    for(int i = 1; i < argc; ++i) {
+    for (int i = 1; i < argc; ++i) {
 	if (strcmp(argv[i], "-d")==0) {
 	    bt_fork_tests = 0;
 	} else if (strcmp(argv[i], "-q")==0) {
