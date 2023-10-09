@@ -120,51 +120,107 @@
 	}								\
     } while (0)
 
+#else
+
+enum bt_cmp_operator {
+    BT_EQ, BT_NE, BT_LE, BT_GE, BT_LT, BT_GT, BT_UNKNOWN
+};
+
+static enum bt_cmp_operator bt_operator (const char * op) {
+    switch (op[1]) {
+    case '=':
+	switch (op[0]) {
+	case '=': return BT_EQ;
+	case '!': return BT_NE;
+	case '<': return BT_LE;
+	case '>': return BT_LE;
+	default: return BT_UNKNOWN;
+	}
+    case '<': return BT_LT;
+    case '>': return BT_GT;
+    default: return BT_UNKNOWN;
+    }
+}
+
+BT_POSSIBLY_UNUSED
+static int check_cmp_int (int x, int y, const char * op,
+			  const char * x_str, const char * y_str,
+			  const char * filename, int line) {
+    int res;
+    switch (bt_operator(op)) {
+    case BT_EQ: res = (x == y); break;
+    case BT_NE: res = (x != y); break;
+    case BT_LE: res = (x <= y); break;
+    case BT_GE: res = (x >= y); break;
+    case BT_LT: res = (x < y); break;
+    case BT_GT: res = (x > y); break;
+    default: res = 0;
+    }
+    if (!res)
+	printf("\n%s:%d: Assertion '%s %s %s' failed: %s == %d, %s == %d\n", \
+	       filename, line, x_str, op, y_str, x_str, x, y_str, y);
+    return res;
+}
+
+BT_POSSIBLY_UNUSED
+static int check_cmp_uint (unsigned int x, unsigned int y, const char * op,
+			  const char * x_str, const char * y_str,
+			  const char * filename, int line) {
+    int res;
+    switch (bt_operator(op)) {
+    case BT_EQ: res = (x == y); break;
+    case BT_NE: res = (x != y); break;
+    case BT_LE: res = (x <= y); break;
+    case BT_GE: res = (x >= y); break;
+    case BT_LT: res = (x < y); break;
+    case BT_GT: res = (x > y); break;
+    default: res = 0;
+    }
+    if (!res)
+	printf("\n%s:%d: Assertion '%s %s %s' failed: %s == %u, %s == %u\n", \
+	       filename, line, x_str, op, y_str, x_str, x, y_str, y);
+    return res;
+}
+
+BT_POSSIBLY_UNUSED
+static int check_cmp_double (double x, double y, const char * op,
+			     const char * x_str, const char * y_str,
+			     const char * filename, int line) {
+    int res;
+    switch (bt_operator(op)) {
+    case BT_EQ: res = (x == y); break;
+    case BT_NE: res = (x != y); break;
+    case BT_LE: res = (x <= y); break;
+    case BT_GE: res = (x >= y); break;
+    case BT_LT: res = (x < y); break;
+    case BT_GT: res = (x > y); break;
+    default: res = 0;
+    }
+    if (!res)
+	printf("\n%s:%d: Assertion '%s %s %s' failed: %s == %f, %s == %f\n", \
+	       filename, line, x_str, op, y_str, x_str, x, y_str, y);
+    return res;
+}
+
+#define CHECK_CMP(X,OP,Y) do {						\
+    if (! _Generic ((Y),						\
+                    int : check_cmp_int,				\
+           unsigned int : check_cmp_uint,				\
+                 double : check_cmp_double)				\
+               ((X),(Y),#OP,#X,#Y,__FILE__,__LINE__)) {			\
+        TEST_FAILED;							\
+    }									\
+} while (0)
+
+#endif	/* C++/C */
+
 #define CHECK_UINT_CMP(X,OP,Y) CHECK_CMP(X,OP,Y)
 
 #define CHECK_INT_CMP(X,OP,Y) CHECK_CMP(X,OP,Y)
 
 #define CHECK_DOUBLE_CMP(X,OP,Y) CHECK_CMP(X,OP,Y)
 
-#else
 
-#define CHECK_INT_CMP(X,OP,Y) do {					\
-	intmax_t x_ = (X);						\
-	intmax_t y_ = (Y);						\
-	if (!(x_ OP y_)) {						\
-	    const char * X_str = #X;					\
-	    const char * Y_str = #Y;					\
-	    printf("\n%s:%d: Assertion '%s "#OP" %s' failed: %s == %jd, %s == %jd\n", \
-		   __FILE__, __LINE__, X_str, Y_str, X_str, x_, Y_str, y_); \
-	    TEST_FAILED;						\
-	}								\
-    } while (0)
-
-#define CHECK_UINT_CMP(X,OP,Y) do {					\
-	uintmax_t x_ = (X);						\
-	uintmax_t y_ = (Y);						\
-	if (!(x_ OP y_)) {						\
-	    const char * X_str = #X;					\
-	    const char * Y_str = #Y;					\
-	    printf("\n%s:%d: Assertion '%s "#OP" %s' failed: %s == %ju, %s == %ju\n", \
-		   __FILE__, __LINE__, X_str, Y_str, X_str, x_, Y_str, y_); \
-	    TEST_FAILED;						\
-	}								\
-    } while (0)
-
-#define CHECK_DOUBLE_CMP(X,OP,Y) do {					\
-	double x_ = (X);						\
-	double y_ = (Y);						\
-	if (!(x_ OP y_)) {						\
-	    const char * X_str = #X;					\
-	    const char * Y_str = #Y;					\
-	    printf("\n%s:%d: Assertion '%s "#OP" %s' failed: %s == %lf, %s == %lf\n", \
-		   __FILE__, __LINE__, X_str, Y_str, X_str, x_, Y_str, y_); \
-	    TEST_FAILED;						\
-	}								\
-    } while (0)
-
-#endif	/* C++/C */
 
 BT_POSSIBLY_UNUSED
 static int bt_fork_tests = 1;
@@ -196,19 +252,19 @@ static int bt_add_test(struct bt_test_descriptor * t) {
 
 #ifdef __cplusplus
 #define TEST(test_name)							\
-BT_POSSIBLY_UNUSED static int test_name ## _fn ();					\
+BT_POSSIBLY_UNUSED static int test_name ## _test ();					\
 BT_POSSIBLY_UNUSED static struct bt_test_descriptor test_name ## _descr		\
-    = { # test_name, test_name ## _fn, __FILE__, __LINE__, 0};		\
+    = { # test_name, test_name ## _test, __FILE__, __LINE__, 0};		\
 BT_POSSIBLY_UNUSED static struct bt_test_descriptor * test_name = & test_name ## _descr; \
 BT_POSSIBLY_UNUSED static const int test_name ## _init = bt_add_test(test_name);	\
-BT_POSSIBLY_UNUSED static int test_name ## _fn ()
+BT_POSSIBLY_UNUSED static int test_name ## _test ()
 #else
 #define  TEST(test_name)						\
-BT_POSSIBLY_UNUSED static int test_name ## _fn ();					\
+BT_POSSIBLY_UNUSED static int test_name ## _test ();					\
 BT_POSSIBLY_UNUSED static struct bt_test_descriptor test_name ## _descr		\
-    = { # test_name, test_name ## _fn, __FILE__, __LINE__, 0};		\
+    = { # test_name, test_name ## _test, __FILE__, __LINE__, 0};		\
 BT_POSSIBLY_UNUSED static struct bt_test_descriptor * test_name = & test_name ## _descr; \
-BT_POSSIBLY_UNUSED static int test_name ## _fn ()
+BT_POSSIBLY_UNUSED static int test_name ## _test ()
 #endif
 
 BT_POSSIBLY_UNUSED static unsigned int bt_fail_count = 0;
