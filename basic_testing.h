@@ -133,7 +133,7 @@ static enum bt_cmp_operator bt_operator (const char * op) {
 	case '=': return BT_EQ;
 	case '!': return BT_NE;
 	case '<': return BT_LE;
-	case '>': return BT_LE;
+	case '>': return BT_GE;
 	default: return BT_UNKNOWN;
 	}
     case '<': return BT_LT;
