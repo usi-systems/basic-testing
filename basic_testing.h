@@ -97,8 +97,8 @@
 	if (!(strcmp(x_, y_) OP 0)) {					\
 	    const char * X_str = #X;					\
 	    const char * Y_str = #Y;					\
-	    printf("\n%s:%d: Assertion '%s "#OP" %s' failed: %s == %s, %s == %s\n", \
-		   __FILE__, __LINE__, X_str, Y_str, X_str, x_, Y_str, y_); \
+	    printf("\n%s:%d: Assertion '%s "#OP" %s' failed: %s "#OP" %s\n", \
+		   __FILE__, __LINE__, X_str, Y_str, x_, y_); \
 	    TEST_FAILED;						\
 	}								\
     } while (0)
@@ -115,7 +115,7 @@
 	if (!(x_ OP y_)) {						\
 	    std::cout << std::endl <<__FILE__ << ":" << __LINE__	\
 		      << ": Assertion '"#X" "#OP" "#Y"' failed: "	\
-		#X" == " << x_ << ", "#Y" == " << y_ << std::endl;	\
+                      << x_ << " "#OP" " << y_ << std::endl;		\
 	    TEST_FAILED;						\
 	}								\
     } while (0)
@@ -157,8 +157,8 @@ static int check_cmp_int (int x, int y, const char * op,
     default: res = 0;
     }
     if (!res)
-	printf("\n%s:%d: Assertion '%s %s %s' failed: %s == %d, %s == %d\n", \
-	       filename, line, x_str, op, y_str, x_str, x, y_str, y);
+	printf("\n%s:%d: Assertion '%s %s %s' failed: %d %s %d\n", \
+	       filename, line, x_str, op, y_str, x, op, y);
     return res;
 }
 
@@ -177,8 +177,8 @@ static int check_cmp_uint (unsigned int x, unsigned int y, const char * op,
     default: res = 0;
     }
     if (!res)
-	printf("\n%s:%d: Assertion '%s %s %s' failed: %s == %u, %s == %u\n", \
-	       filename, line, x_str, op, y_str, x_str, x, y_str, y);
+	printf("\n%s:%d: Assertion '%s %s %s' failed: %u %s %u\n", \
+	       filename, line, x_str, op, y_str, x, op, y);
     return res;
 }
 
@@ -197,8 +197,8 @@ static int check_cmp_double (double x, double y, const char * op,
     default: res = 0;
     }
     if (!res)
-	printf("\n%s:%d: Assertion '%s %s %s' failed: %s == %f, %s == %f\n", \
-	       filename, line, x_str, op, y_str, x_str, x, y_str, y);
+	printf("\n%s:%d: Assertion '%s %s %s' failed: %f %s %f\n", \
+	       filename, line, x_str, op, y_str, x, op, y);
     return res;
 }
 

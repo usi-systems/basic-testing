@@ -6,7 +6,7 @@ Running test test0...                                PASS
 Running test test1...                                PASS
 Running test test2...                                PASS
 Running test test3f... 
-tests/test3f.cc:104: Assertion 'r.number == 77' failed: r.number == 7, 77 == 77
+tests/test3f.cc:104: Assertion 'r.number == 77' failed: 7 == 77
 FAIL
 run 'tests/test3f' to see what went wrong
 run 'tests/test3f -d' with a debugger
