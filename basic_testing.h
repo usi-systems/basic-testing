@@ -59,7 +59,7 @@
 
 #define TEST_FAILED do {			\
 	if (bt_fork_tests)			\
-	    return BT_FAILURE;		\
+	    return BT_FAILURE;			\
 	else					\
 	    abort();				\
     } while(0)
@@ -89,16 +89,14 @@
     } while (0)
 
 /* Check for comparison between two C strings based on binary
- * relations/operators (==, >=, <=, !=).
+ * relations/operators (==, >=, <=, !=, <, >).
  */
 #define CHECK_STRING_CMP(X,OP,Y) do {					\
 	const char * x_ = (X);						\
 	const char * y_ = (Y);						\
 	if (!(strcmp(x_, y_) OP 0)) {					\
-	    const char * X_str = #X;					\
-	    const char * Y_str = #Y;					\
-	    printf("\n%s:%d: Assertion '%s "#OP" %s' failed: %s "#OP" %s\n", \
-		   __FILE__, __LINE__, X_str, Y_str, x_, y_); \
+            printf("\n%s:%d: Assertion '"#X" "#OP" "#Y"' failed: %s "#OP" %s\n", \
+		   __FILE__, __LINE__, x_, y_); \
 	    TEST_FAILED;						\
 	}								\
     } while (0)
