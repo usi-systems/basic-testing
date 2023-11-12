@@ -31,13 +31,16 @@ compile: $(PROGRAMS) $(OBJECTS)
 .PHONY: check
 check: check-bin check-io-sh
 
-WITH_VALGRIND :=
+WITH_VALGRIND ?=
 
-PROGRAMS_DRIVERS := $(foreach prog,$(PROGRAMS),$(prog)$(if $(WITH_VALGRIND),-valgrind,))
+VALGRIND_FLAGS = -q --leak-check=full --error-exitcode=1
+
+PROGRAMS_DRIVERS_EXT := $(if $(WITH_VALGRIND),-valgrind,)
+PROGRAMS_DRIVERS := $(foreach prog,$(PROGRAMS),$(prog)$(PROGRAMS_DRIVERS_EXT))
 PROGRAMS_CWD := $(shell pwd)
 
 %-valgrind: %
-	echo -e '#!/bin/sh\nexec valgrind -q "$${project_dir:-.}/$*" $$@' > $@
+	echo -e '#!/bin/sh\nexec valgrind $(VALGRIND_FLAGS) "$${project_dir:-.}/$*" $$@' > $@
 	chmod 755 $@
 
 TEST_DIAGNOSTICS=yes
@@ -191,7 +194,7 @@ check-bin: $(TESTS_BIN)
 		test_start "$$t"; \
 		if test -n "$(WITH_VALGRIND)"; then \
 			echo ;\
-			valgrind -q "$(TESTS_DIR)/$$t" 2>&1 &\
+			valgrind $(VALGRIND_FLAGS) "$(TESTS_DIR)/$$t" 2>&1 &\
 		else \
 			"$(TESTS_DIR)/$$t" -q &\
 		fi; \
