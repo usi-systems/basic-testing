@@ -229,11 +229,16 @@ static unsigned int bt_timeout = 3; /* three seconds */
 BT_POSSIBLY_UNUSED
 static int bt_verbose = 1;
 
+struct bt_test_additional_data {
+    const char *description;
+};
+
 struct bt_test_descriptor {
     const char * name;
     int (*test_function)();
     const char * file;
     int line;
+    struct bt_test_additional_data *data;
     struct bt_test_descriptor * next;
 };
 
@@ -249,19 +254,23 @@ static int bt_add_test(struct bt_test_descriptor * t) {
 }
 
 #ifdef __cplusplus
-#define TEST(test_name)							\
-BT_POSSIBLY_UNUSED static int test_name ## _test ();					\
+#define TEST(test_name, ...)							\
+BT_POSSIBLY_UNUSED static int test_name ## _test ();				\
+BT_POSSIBLY_UNUSED static struct bt_test_additional_data test_name ## _data 	\
+    = { __VA_ARGS__ };								\
 BT_POSSIBLY_UNUSED static struct bt_test_descriptor test_name ## _descr		\
-    = { # test_name, test_name ## _test, __FILE__, __LINE__, 0};		\
-BT_POSSIBLY_UNUSED static struct bt_test_descriptor * test_name = & test_name ## _descr; \
+    = { # test_name, test_name ## _test, __FILE__, __LINE__, & test_name ## _data, 0};	\
+BT_POSSIBLY_UNUSED static struct bt_test_descriptor * test_name = & test_name ## _descr;\
 BT_POSSIBLY_UNUSED static const int test_name ## _init = bt_add_test(test_name);	\
 BT_POSSIBLY_UNUSED static int test_name ## _test ()
 #else
-#define  TEST(test_name)						\
-BT_POSSIBLY_UNUSED static int test_name ## _test ();					\
+#define  TEST(test_name, ...)							\
+BT_POSSIBLY_UNUSED static int test_name ## _test ();				\
+BT_POSSIBLY_UNUSED static struct bt_test_additional_data test_name ## _data 	\
+    = { __VA_ARGS__ };								\
 BT_POSSIBLY_UNUSED static struct bt_test_descriptor test_name ## _descr		\
-    = { # test_name, test_name ## _test, __FILE__, __LINE__, 0};		\
-BT_POSSIBLY_UNUSED static struct bt_test_descriptor * test_name = & test_name ## _descr; \
+    = { # test_name, test_name ## _test, __FILE__, __LINE__, & test_name ## _data, 0};	\
+BT_POSSIBLY_UNUSED static struct bt_test_descriptor * test_name = & test_name ## _descr;\
 BT_POSSIBLY_UNUSED static int test_name ## _test ()
 #endif
 
