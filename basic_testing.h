@@ -358,8 +358,10 @@ static void bt_run_and_record_test(const struct bt_test_descriptor * t) {
     switch (bt_run_test(t)) {
     case BT_FAILURE:
 	bt_fail_count += 1;
-	if (bt_verbose)
-	    printf("test %-40s  FAIL\n", t->name);
+	if (bt_verbose) {
+		printf("FAIL\n");
+		if (t->data->description) printf("     %s\n", t->data->description);
+	}
 	break;
     case BT_SUCCESS:
 	bt_pass_count += 1;
