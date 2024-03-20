@@ -78,27 +78,33 @@
 /* Assertion checks
  */
 
+ struct bt_assertion_data {
+	const char *desc;
+ };
+
 /* Check for generic Boolean expressions
  */
-#define CHECK(expr) do {					\
-	if (!(expr)) {						\
-	    printf("\n%s:%d: Assertion '"#expr"' failed\n",	\
-		   __FILE__, __LINE__);				\
-	    TEST_FAILED;					\
-	}							\
+#define CHECK(expr, ...) do {					\
+	const struct bt_assertion_data data = { __VA_ARGS__ };	\
+	if (!(expr)) {								\
+	    printf("\n%s:%d: Assertion '"#expr"' failed\n     %s\n", \
+		   __FILE__, __LINE__, data.desc);		\
+	    TEST_FAILED;							\
+	}											\
     } while (0)
 
 /* Check for comparison between two C strings based on binary
  * relations/operators (==, >=, <=, !=, <, >).
  */
-#define CHECK_STRING_CMP(X,OP,Y) do {					\
+#define CHECK_STRING_CMP(X,OP,Y, ...) do {		\
+	const struct bt_assertion_data data = { __VA_ARGS__ };	\
 	const char * x_ = (X);						\
 	const char * y_ = (Y);						\
-	if (!(strcmp(x_, y_) OP 0)) {					\
-            printf("\n%s:%d: Assertion '"#X" "#OP" "#Y"' failed: %s "#OP" %s\n", \
-		   __FILE__, __LINE__, x_, y_); \
-	    TEST_FAILED;						\
-	}								\
+	if (!(strcmp(x_, y_) OP 0)) {				\
+            printf("\n%s:%d: Assertion '"#X" "#OP" "#Y"' failed: %s "#OP" %s\n     %s\n", \
+		   __FILE__, __LINE__, x_, y_, data.desc); \
+	    TEST_FAILED;							\
+	}											\
     } while (0)
 
 /* Checks for comparisons based on binary relations/operators (==, >=,
@@ -107,15 +113,18 @@
  */
 #ifdef __cplusplus
 
-#define CHECK_CMP(X,OP,Y) do {						\
-	auto x_ = (X);							\
+#define CHECK_CMP(X,OP,Y, ...) do {				\
+	const struct bt_assertion_data data = { __VA_ARGS__ };	\
+	auto x_ = (X);								\
 	decltype (x_) y_ = (Y);						\
-	if (!(x_ OP y_)) {						\
-	    std::cout << std::endl <<__FILE__ << ":" << __LINE__	\
+	if (!(x_ OP y_)) {							\
+	    std::cout << std::endl <<__FILE__ << ":" << __LINE__\
 		      << ": Assertion '"#X" "#OP" "#Y"' failed: "	\
-                      << x_ << " "#OP" " << y_ << std::endl;		\
-	    TEST_FAILED;						\
-	}								\
+                      << x_ << " "#OP" " << y_ << std::endl \
+					  << "     " << data.desc << std::endl  \
+					  ;\
+	    TEST_FAILED;							\
+	}											\
     } while (0)
 
 #else
@@ -143,7 +152,7 @@ static enum bt_cmp_operator bt_operator (const char * op) {
 BT_POSSIBLY_UNUSED
 static int check_cmp_int (int x, int y, const char * op,
 			  const char * x_str, const char * y_str,
-			  const char * filename, int line) {
+			  const char * filename, int line, const char* desc) {
     int res;
     switch (bt_operator(op)) {
     case BT_EQ: res = (x == y); break;
@@ -155,15 +164,15 @@ static int check_cmp_int (int x, int y, const char * op,
     default: res = 0;
     }
     if (!res)
-	printf("\n%s:%d: Assertion '%s %s %s' failed: %d %s %d\n", \
-	       filename, line, x_str, op, y_str, x, op, y);
+	printf("\n%s:%d: Assertion '%s %s %s' failed: %d %s %d\n     %s\n", \
+	       filename, line, x_str, op, y_str, x, op, y, desc);
     return res;
 }
 
 BT_POSSIBLY_UNUSED
 static int check_cmp_uint (unsigned int x, unsigned int y, const char * op,
 			  const char * x_str, const char * y_str,
-			  const char * filename, int line) {
+			  const char * filename, int line, const char* desc) {
     int res;
     switch (bt_operator(op)) {
     case BT_EQ: res = (x == y); break;
@@ -175,15 +184,15 @@ static int check_cmp_uint (unsigned int x, unsigned int y, const char * op,
     default: res = 0;
     }
     if (!res)
-	printf("\n%s:%d: Assertion '%s %s %s' failed: %u %s %u\n", \
-	       filename, line, x_str, op, y_str, x, op, y);
+	printf("\n%s:%d: Assertion '%s %s %s' failed: %u %s %u\n     %s\n", \
+	       filename, line, x_str, op, y_str, x, op, y, desc);
     return res;
 }
 
 BT_POSSIBLY_UNUSED
 static int check_cmp_double (double x, double y, const char * op,
 			     const char * x_str, const char * y_str,
-			     const char * filename, int line) {
+			     const char * filename, int line, const char* desc) {
     int res;
     switch (bt_operator(op)) {
     case BT_EQ: res = (x == y); break;
@@ -195,28 +204,29 @@ static int check_cmp_double (double x, double y, const char * op,
     default: res = 0;
     }
     if (!res)
-	printf("\n%s:%d: Assertion '%s %s %s' failed: %f %s %f\n", \
-	       filename, line, x_str, op, y_str, x, op, y);
+	printf("\n%s:%d: Assertion '%s %s %s' failed: %f %s %f\n     %s\n", \
+	       filename, line, x_str, op, y_str, x, op, y, desc);
     return res;
 }
 
-#define CHECK_CMP(X,OP,Y) do {						\
+#define CHECK_CMP(X,OP,Y, ...) do {				\
+	const struct bt_assertion_data data = { __VA_ARGS__ };	\
     if (! _Generic ((Y),						\
-                    int : check_cmp_int,				\
-           unsigned int : check_cmp_uint,				\
-                 double : check_cmp_double)				\
-               ((X),(Y),#OP,#X,#Y,__FILE__,__LINE__)) {			\
+                    int : check_cmp_int,		\
+           unsigned int : check_cmp_uint,		\
+                 double : check_cmp_double)		\
+               ((X),(Y),#OP,#X,#Y,__FILE__,__LINE__, data.desc)) {	\
         TEST_FAILED;							\
-    }									\
+    }											\
 } while (0)
 
 #endif	/* C++/C */
 
-#define CHECK_UINT_CMP(X,OP,Y) CHECK_CMP(X,OP,Y)
+#define CHECK_UINT_CMP(X,OP,Y, ...) CHECK_CMP(X,OP,Y, __VA_ARGS__)
 
-#define CHECK_INT_CMP(X,OP,Y) CHECK_CMP(X,OP,Y)
+#define CHECK_INT_CMP(X,OP,Y, ...) CHECK_CMP(X,OP,Y, __VA_ARGS__)
 
-#define CHECK_DOUBLE_CMP(X,OP,Y) CHECK_CMP(X,OP,Y)
+#define CHECK_DOUBLE_CMP(X,OP,Y, ...) CHECK_CMP(X,OP,Y, __VA_ARGS__)
 
 
 
@@ -229,11 +239,16 @@ static unsigned int bt_timeout = 3; /* three seconds */
 BT_POSSIBLY_UNUSED
 static int bt_verbose = 1;
 
+struct bt_test_additional_data {
+    const char *description;
+};
+
 struct bt_test_descriptor {
     const char * name;
     int (*test_function)();
     const char * file;
     int line;
+    struct bt_test_additional_data *data;
     struct bt_test_descriptor * next;
 };
 
@@ -249,19 +264,23 @@ static int bt_add_test(struct bt_test_descriptor * t) {
 }
 
 #ifdef __cplusplus
-#define TEST(test_name)							\
-BT_POSSIBLY_UNUSED static int test_name ## _test ();					\
+#define TEST(test_name, ...)							\
+BT_POSSIBLY_UNUSED static int test_name ## _test ();				\
+BT_POSSIBLY_UNUSED static struct bt_test_additional_data test_name ## _data 	\
+    = { __VA_ARGS__ };								\
 BT_POSSIBLY_UNUSED static struct bt_test_descriptor test_name ## _descr		\
-    = { # test_name, test_name ## _test, __FILE__, __LINE__, 0};		\
-BT_POSSIBLY_UNUSED static struct bt_test_descriptor * test_name = & test_name ## _descr; \
+    = { # test_name, test_name ## _test, __FILE__, __LINE__, & test_name ## _data, 0};	\
+BT_POSSIBLY_UNUSED static struct bt_test_descriptor * test_name = & test_name ## _descr;\
 BT_POSSIBLY_UNUSED static const int test_name ## _init = bt_add_test(test_name);	\
 BT_POSSIBLY_UNUSED static int test_name ## _test ()
 #else
-#define  TEST(test_name)						\
-BT_POSSIBLY_UNUSED static int test_name ## _test ();					\
+#define  TEST(test_name, ...)							\
+BT_POSSIBLY_UNUSED static int test_name ## _test ();				\
+BT_POSSIBLY_UNUSED static struct bt_test_additional_data test_name ## _data 	\
+    = { __VA_ARGS__ };								\
 BT_POSSIBLY_UNUSED static struct bt_test_descriptor test_name ## _descr		\
-    = { # test_name, test_name ## _test, __FILE__, __LINE__, 0};		\
-BT_POSSIBLY_UNUSED static struct bt_test_descriptor * test_name = & test_name ## _descr; \
+    = { # test_name, test_name ## _test, __FILE__, __LINE__, & test_name ## _data, 0};	\
+BT_POSSIBLY_UNUSED static struct bt_test_descriptor * test_name = & test_name ## _descr;\
 BT_POSSIBLY_UNUSED static int test_name ## _test ()
 #endif
 
@@ -349,8 +368,10 @@ static void bt_run_and_record_test(const struct bt_test_descriptor * t) {
     switch (bt_run_test(t)) {
     case BT_FAILURE:
 	bt_fail_count += 1;
-	if (bt_verbose)
-	    printf("test %-40s  FAIL\n", t->name);
+	if (bt_verbose) {
+		printf("FAIL\n");
+		if (t->data->description) printf("     %s\n", t->data->description);
+	}
 	break;
     case BT_SUCCESS:
 	bt_pass_count += 1;
