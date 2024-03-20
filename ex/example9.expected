@@ -1,0 +1,18 @@
+Running test test0...                                
+tests/test0.c:12: Assertion '0 == 1' failed
+     This assertion should fail
+
+tests/test0.c:17: Assertion '"str1" == "str2"' failed: str1 == str2
+     This string comparison should fail
+
+tests/test0.c:23: Assertion 'a != a' failed: 0 != 0
+     This integer comparison should fail
+
+tests/test0.c:29: Assertion 'a != a' failed: 0 != 0
+     This uint assertion should fail
+
+tests/test0.c:35: Assertion 'a != a' failed: 0.000000 != 0.000000
+     This double assertion should fail
+FAIL
+run 'tests/test0' to see what went wrong
+run 'tests/test0 -d' with a debugger
