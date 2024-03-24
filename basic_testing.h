@@ -19,6 +19,8 @@
 #ifndef BASIC_TESTING_H_INCLUDED
 #define BASIC_TESTING_H_INCLUDED
 
+#include <dlfcn.h>
+
 #include <stdlib.h>
 #include <stdio.h>
 #include <stdint.h>
@@ -218,7 +220,49 @@ static int check_cmp_double (double x, double y, const char * op,
 
 #define CHECK_DOUBLE_CMP(X,OP,Y) CHECK_CMP(X,OP,Y)
 
+/* Malloc instrumentation
+*/
+BT_POSSIBLY_UNUSED
+void *malloc(size_t size)
+{
+    static void *(*libc_malloc)(size_t) = NULL;
+	#ifdef __cplusplus
+    if (!libc_malloc) 
+		libc_malloc = reinterpret_cast<void*(*)(size_t)>(dlsym(RTLD_NEXT , "malloc"));
+	#else
+	if (!libc_malloc)	
+		libc_malloc = dlsym(RTLD_NEXT, "malloc");
+	#endif
+	return libc_malloc(size);
+}
+BT_POSSIBLY_UNUSED
+void free(void * ptr)
+{ 
+    static void (*libc_free)(void *) = NULL;
+	#ifdef __cplusplus
+    if (!libc_free) 
+		libc_free = reinterpret_cast<void(*)(void*)>(dlsym(RTLD_NEXT , "free"));
+	#else
+	if (!libc_free) 
+		libc_free = dlsym(RTLD_NEXT, "free");
+	#endif
 
+	libc_free(ptr);
+}
+BT_POSSIBLY_UNUSED
+void *realloc(void * ptr, size_t new_size )
+{ 
+    static void *(*libc_realloc)(void *, size_t) = NULL;
+	#ifdef __cplusplus
+	if (!libc_realloc)
+		libc_realloc = reinterpret_cast<void*(*)(void*,size_t)>(dlsym(RTLD_NEXT , "realloc"));
+	#else
+    if (!libc_realloc) 
+		libc_realloc = dlsym(RTLD_NEXT, "realloc");	
+	#endif
+
+	return libc_realloc(ptr, new_size);
+}
 
 BT_POSSIBLY_UNUSED
 static int bt_fork_tests = 1;

@@ -21,6 +21,8 @@ static size_t max_allocations = 1;
     } while (0)
 
 int *dummy_test() {
+    SET_ALLOC(0);
+    printf("%s", "a random string");
     SET_ALLOC(1);
     int *p = malloc(sizeof(int));
     CHECK_ALLOC(0);
@@ -62,7 +64,6 @@ void *malloc(size_t size)
     }
     
     return 0;
-
 }
 
 void free(void * ptr)

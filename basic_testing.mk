@@ -1,5 +1,5 @@
-CFLAGS=-Wall -g $(COVERAGE_FLAGS)
-CXXFLAGS=-Wall -g $(COVERAGE_FLAGS)
+CFLAGS=-Wall -g $(COVERAGE_FLAGS) -Wl,--no-as-needed -ldl -D_GNU_SOURCE
+CXXFLAGS=-Wall -g $(COVERAGE_FLAGS) -Wl,--no-as-needed -ldl -D_GNU_SOURCE
 
 COVERAGE_FLAGS=$(if $(WITH_COVERAGE),--coverage,)
 
