@@ -222,6 +222,15 @@ static int check_cmp_double (double x, double y, const char * op,
 
 /* Malloc instrumentation
 */
+
+static unsigned int bt_alloc_failure_mode = 0;
+
+// Sets all allocation mode to suceed (default)
+#define ALLOC_NO_FAIL bt_alloc_failure_mode = 0;
+// Sets all allocations to fail
+#define ALLOC_FAIL_ALL bt_alloc_failure_mode = 1;
+
+
 BT_POSSIBLY_UNUSED
 void *malloc(size_t size)
 {
@@ -233,6 +242,11 @@ void *malloc(size_t size)
 	if (!libc_malloc)	
 		libc_malloc = dlsym(RTLD_NEXT, "malloc");
 	#endif
+
+	if (bt_alloc_failure_mode) {
+		return NULL;
+	}
+
 	return libc_malloc(size);
 }
 BT_POSSIBLY_UNUSED
@@ -260,6 +274,10 @@ void *realloc(void * ptr, size_t new_size )
     if (!libc_realloc) 
 		libc_realloc = dlsym(RTLD_NEXT, "realloc");	
 	#endif
+
+	if (bt_alloc_failure_mode) {
+		return NULL;
+	}
 
 	return libc_realloc(ptr, new_size);
 }
