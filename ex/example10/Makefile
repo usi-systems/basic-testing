@@ -1,3 +1,3 @@
-PROGRAMS = alloc.o
+OBJECTS=alloc.o
 
 include ../../basic_testing.mk
