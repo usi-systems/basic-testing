@@ -67,6 +67,18 @@
             "kind": "build",
             "isDefault": false
         }
+    },
+    {
+        "label": "Build single test",
+        "detail": "To be run from a test file in a tests directory, and the Makefile in its parent directory",
+        "type": "shell",
+        "presentation": {
+            "reveal": "never"
+        },
+        "options": {
+            "cwd": "${fileDirname}/../"
+        },
+        "command": "make check-single-bin BIN_NAME=tests/${fileBasenameNoExtension}"
     }
 ]
 }

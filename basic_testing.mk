@@ -208,6 +208,31 @@ check-bin: $(TESTS_BIN)
 	done; \
 	test_summary 'Summary: PASS '
 
+.PHONY: check-single-bin
+check-single-bin: $(BIN_NAME)
+	@exec 2> /dev/null; \
+	if test -z $$BIN_NAME; then \
+		echo "Error: Missing test to run, please set BIN_NAME=<binary_name>";  \
+		echo "  example: \`make check-single-bin BIN_NAME=tests/test0\`"; \
+		exit 1; fi; \
+	$(SCRIPT_INIT); \
+	t=$$BIN_NAME; \
+	test_start "$$t"; \
+		if test -n "$(WITH_VALGRIND)"; then \
+			echo ;\
+			valgrind $(VALGRIND_FLAGS) "$(TESTS_DIR)/$$t" 2>&1 &\
+		else \
+			"$(TESTS_DIR)/$$t" $(BIN_FLAGS) &\
+		fi; \
+		$(SCRIPT_GET_TEST_RESULT); \
+		if test $$res = KO; then \
+			test_diag "run '$(TESTS_DIR)/$$t' to see what went wrong" ; \
+			test_diag "run '$(TESTS_DIR)/$$t -d' with a debugger" ; \
+		else \
+			test_ok PASS; \
+		fi; \
+	test_summary 'Summary: PASS '
+
 .PHONY: clean
 clean:
 	rm -f $(PROGRAMS) *-valgrind $(OBJECTS) tests/*.o $(TESTS_BIN) \

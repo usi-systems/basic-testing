@@ -9,7 +9,7 @@
             "type": "cppdbg",
             "request": "launch",
             "cwd": "${fileDirname}",
-            "preLaunchTask": "Run all tests",
+            "preLaunchTask": "Build single test",
             "program": "${fileDirname}/${fileBasenameNoExtension}",
             "args": ["-d"],
             "MIMode": "gdb",
