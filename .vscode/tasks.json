@@ -78,7 +78,24 @@
         "options": {
             "cwd": "${fileDirname}/../"
         },
-        "command": "make check-single-bin BIN_NAME=tests/${fileBasenameNoExtension}"
+        "command": "make check-single-bin BIN_NAME=tests/${fileBasenameNoExtension}",
+        "problemMatcher": [
+            {
+                "owner": "make",
+                "fileLocation":[
+                    "relative",
+                    "${fileDirname}/tests/"
+                ],
+                "pattern":
+                {
+                // Matches "Running test test_name...                              FAIL"
+                "regexp": "^Running test\\s(.+)\\.\\.\\.\\s+FAIL$",
+                "file": 1,
+                "message": 1,
+                "kind": "file"
+                },
+            }
+        ],
     }
 ]
 }
