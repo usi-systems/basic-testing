@@ -1,58 +1,72 @@
 
 {
-    "version": "2.0.0",
-    "tasks": [
-        {
-            "label": "Build all tests",
-            "type": "shell",
-            "command": "echo ${cwd} && make compile",
-            "presentation": {
-                "reveal": "never"
-            },
-            "problemMatcher": {
-                "owner": "make",
-                "fileLocation": [
-                    "relative",
-                    "${workspaceFolder}"
-                ],
-                "pattern": {
-                    "regexp": "Running test (.+)... ( )+(FAIL|TIME OUT)",
-                    "file": 1
-                }
-            },
-            "options": {
-                "cwd": "${fileDirname}"
-            },
-            "group": {
-                "kind": "build",
-                "isDefault": false
-            }
+"version": "2.0.0",
+"tasks": [
+    {
+        "label": "Build implementation",
+        "type": "shell",
+        "command": "make compile",
+        "presentation": {
+            "reveal": "never"
         },
-        {
-            "label": "Run all tests",
-            "type": "shell",
-            "command": "echo ${cwd} && make all",
-            "presentation": {
-                "reveal": "never"
-            },
-            "problemMatcher": {
-                "owner": "make",
-                "fileLocation": [
+        // Allows for the definition of a regexp, which matches the output of the command when some problem occurs;
+        // these get reported in the "problems" tab of VScode
+        "problemMatcher": {
+            "owner": "basic_testing",
+                "fileLocation":[
                     "relative",
-                    "${workspaceFolder}"
+                    "${fileDirname}/"
                 ],
-                "pattern": {
-                    "regexp": "Running test (.+)... ( )+(FAIL|TIME OUT)",
-                    "file": 1
-                }
-            },
-            "options": {
-                "cwd": "${fileDirname}"
-            },
-            "group": {
-                "kind": "build",
-                "isDefault": false
-            }
+            "pattern": [
+                {
+                    // Matches "tests/test1.c:6:9: warning: unused variable ‘result’ [-Wunused-variable]"
+                    "regexp": "^(.*):(\\d+):(\\d+):\\s+(warning|error):\\s+(.*)$",
+                    "file": 1,
+                    "line": 2,
+                    "column": 3,
+                    "severity": 4,
+                    "message": 5    
+                }]
+        },
+        "options": {
+            "cwd": "${fileDirname}"
+        },
+        "group": {
+            "kind": "build",
+            "isDefault": false
         }
-    ]
+    },
+    {
+        "label": "Run all tests",
+        "type": "shell",
+        "command": "make all",
+        "presentation": {
+            "reveal": "never"
+        },
+        "problemMatcher": [
+            {
+                "owner": "make",
+                "fileLocation":[
+                    "relative",
+                    "${fileDirname}/tests/"
+                ],
+                "pattern":
+                {
+                // Matches "Running test test_name...                              FAIL"
+                "regexp": "^Running test\\s(.+)\\.\\.\\.\\s+FAIL$",
+                "file": 1,
+                "message": 1,
+                "kind": "file"
+                },
+            }
+        ],
+        "options": {
+            "cwd": "${fileDirname}"
+        },
+        "group": {
+            "kind": "build",
+            "isDefault": false
+        }
+    }
+]
 }
