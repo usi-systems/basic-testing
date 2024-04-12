@@ -234,13 +234,8 @@ BT_POSSIBLY_UNUSED
 void *malloc(size_t size)
 {
     static void *(*libc_malloc)(size_t) = NULL;
-	#ifdef __cplusplus
     if (!libc_malloc) 
-		libc_malloc = reinterpret_cast<void*(*)(size_t)>(dlsym(RTLD_NEXT , "malloc"));
-	#else
-	if (!libc_malloc)	
-		libc_malloc = dlsym(RTLD_NEXT, "malloc");
-	#endif
+		libc_malloc = (void *(*)(size_t))dlsym(RTLD_NEXT , "malloc");
 
 	if (bt_alloc_failure_mode) {
 		return NULL;
