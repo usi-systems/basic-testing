@@ -12,7 +12,7 @@
             "preLaunchTask": "Build single test",
             "program": "${fileDirname}/${fileBasenameNoExtension}",
             "args": ["-d"],
-            "MIMode": "gdb",
+            "MIMode": "${input:debugger}",
             "setupCommands": [
                 {
                     "description": "Enable pretty-printing for gdb",
@@ -26,5 +26,17 @@
                 }
             ],
         }
-    ]
+    ],
+    "inputs": [
+        {
+          "type": "pickString",
+          "id": "debugger",
+          "description": "Which debugger do you want to use?",
+          "options": [
+            "gdb",
+            "lldb",
+          ],
+          "default": "gdb"
+        },
+    ],
 }
