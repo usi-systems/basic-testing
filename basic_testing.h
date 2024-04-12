@@ -261,13 +261,8 @@ BT_POSSIBLY_UNUSED
 void *realloc(void * ptr, size_t new_size )
 { 
     static void *(*libc_realloc)(void *, size_t) = NULL;
-	#ifdef __cplusplus
 	if (!libc_realloc)
-		libc_realloc = reinterpret_cast<void*(*)(void*,size_t)>(dlsym(RTLD_NEXT , "realloc"));
-	#else
-    if (!libc_realloc) 
-		libc_realloc = dlsym(RTLD_NEXT, "realloc");	
-	#endif
+		libc_realloc = (void *(*)(void *,size_t)) dlsym(RTLD_NEXT , "realloc");
 
 	if (bt_alloc_failure_mode) {
 		return NULL;
