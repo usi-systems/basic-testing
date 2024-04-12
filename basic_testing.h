@@ -20,7 +20,6 @@
 #define BASIC_TESTING_H_INCLUDED
 
 #include <dlfcn.h>
-
 #include <stdlib.h>
 #include <stdio.h>
 #include <stdint.h>
