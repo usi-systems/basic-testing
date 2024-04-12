@@ -234,41 +234,37 @@ BT_POSSIBLY_UNUSED
 void *malloc(size_t size)
 {
     static void *(*libc_malloc)(size_t) = NULL;
-    if (!libc_malloc) 
-		libc_malloc = (void *(*)(size_t))dlsym(RTLD_NEXT , "malloc");
+    if (!libc_malloc)
+        libc_malloc = (void *(*)(size_t))dlsym(RTLD_NEXT , "malloc");
 
-	if (bt_alloc_failure_mode) {
-		return NULL;
-	}
+    if (bt_alloc_failure_mode)
+	return NULL;
 
-	return libc_malloc(size);
+    return libc_malloc(size);
 }
+
 BT_POSSIBLY_UNUSED
 void free(void * ptr)
 { 
     static void (*libc_free)(void *) = NULL;
-	#ifdef __cplusplus
-    if (!libc_free) 
-		libc_free = reinterpret_cast<void(*)(void*)>(dlsym(RTLD_NEXT , "free"));
-	#else
-	if (!libc_free) 
-		libc_free = dlsym(RTLD_NEXT, "free");
-	#endif
 
-	libc_free(ptr);
+    if (!libc_free)
+	libc_free = (void (*)(void *)) dlsym(RTLD_NEXT, "free");
+
+    libc_free(ptr);
 }
+
 BT_POSSIBLY_UNUSED
 void *realloc(void * ptr, size_t new_size )
 { 
     static void *(*libc_realloc)(void *, size_t) = NULL;
-	if (!libc_realloc)
-		libc_realloc = (void *(*)(void *,size_t)) dlsym(RTLD_NEXT , "realloc");
+    if (!libc_realloc)
+	libc_realloc = (void *(*)(void *,size_t)) dlsym(RTLD_NEXT , "realloc");
 
-	if (bt_alloc_failure_mode) {
-		return NULL;
-	}
+    if (bt_alloc_failure_mode)
+	return NULL;
 
-	return libc_realloc(ptr, new_size);
+    return libc_realloc(ptr, new_size);
 }
 
 BT_POSSIBLY_UNUSED

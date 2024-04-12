@@ -68,6 +68,4 @@ TEST(fail_first_realloc) {
 
 MAIN_TEST_DRIVER(compile, 
     fail_all_malloc, fail_first_malloc,
-    fail_all_realloc, fail_first_realloc
-    );
-    
+    fail_all_realloc, fail_first_realloc);
