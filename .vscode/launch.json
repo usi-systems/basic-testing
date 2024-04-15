@@ -5,7 +5,14 @@
     "version": "0.2.0",
     "configurations": [
         {
-            "name": "bt debug (gdb)",
+            "name": "Run all tests",
+            "type": "extensionHost",
+            "preLaunchTask": "Run all tests",
+            "request":"launch",
+            // "program":
+        },
+        {
+            "name": "debug current test (gdb)",
             "type": "cppdbg",
             "request": "launch",
             "cwd": "${fileDirname}",
@@ -25,7 +32,8 @@
                     "ignoreFailures": true
                 }
             ],
-        }
+        },
+
     ],
     "inputs": [
         {

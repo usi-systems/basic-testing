@@ -212,7 +212,7 @@ check-bin: $(TESTS_BIN)
 check-single-bin: $(BIN_NAME)
 	@exec 2> /dev/null; \
 	if test -z $$BIN_NAME; then \
-		echo "Error: Missing test to run, please set BIN_NAME=<binary_name>";  \
+		echo "Error: Missing test to run, please set BIN_NAME=<path/to/binary>";  \
 		echo "  example: \`make check-single-bin BIN_NAME=tests/test0\`"; \
 		exit 1; fi; \
 	$(SCRIPT_INIT); \

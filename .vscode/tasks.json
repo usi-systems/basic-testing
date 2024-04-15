@@ -5,7 +5,7 @@
     {
         "label": "Build implementation",
         "type": "shell",
-        "command": "make compile",
+        "command": " touch ${file}; make compile",
         "presentation": {
             "reveal": "never"
         },
