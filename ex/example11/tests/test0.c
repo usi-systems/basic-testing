@@ -11,11 +11,4 @@ TEST(with_variable) {
     TEST_PASSED;
 }
 
-TEST(fail) {
-    if (1) {
-        TEST_FAILED;
-    }
-    TEST_PASSED;
-}
-
-MAIN_TEST_DRIVER(compile, with_variable, fail);
+MAIN_TEST_DRIVER(compile, with_variable);

@@ -1,6 +1,7 @@
 #include "basic_testing.h"
 
 TEST(fail) {
+    int result = 0;
     TEST_FAILED;
 }
 

@@ -5,20 +5,15 @@
     "version": "0.2.0",
     "configurations": [
         {
-            "name": "Run all tests",
-            "type": "extensionHost",
-            "preLaunchTask": "Run all tests",
-            "request":"launch",
-            // "program":
-        },
-        {
             "name": "debug current test (gdb)",
+            // Requires C/C++ extension from Microsoft
             "type": "cppdbg",
             "request": "launch",
             "cwd": "${fileDirname}",
             "preLaunchTask": "Build single test",
             "program": "${fileDirname}/${fileBasenameNoExtension}",
             "args": ["-d"],
+            // Requires C/C++ extension from Microsoft
             "MIMode": "${input:debugger}",
             "setupCommands": [
                 {

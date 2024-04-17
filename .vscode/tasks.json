@@ -3,47 +3,17 @@
 "version": "2.0.0",
 "tasks": [
     {
-        "label": "Build implementation",
+        "label": "Build and run tests",
+        "detail": "Runs all tests, or a single test when opened in the editor",
         "type": "shell",
-        "command": " touch ${file}; make compile",
         "presentation": {
             "reveal": "never"
-        },
-        // Allows for the definition of a regexp, which matches the output of the command when some problem occurs;
-        // these get reported in the "problems" tab of VScode
-        "problemMatcher": {
-            "owner": "basic_testing",
-                "fileLocation":[
-                    "relative",
-                    "${fileDirname}/"
-                ],
-            "pattern": [
-                {
-                    // Matches "tests/test1.c:6:9: warning: unused variable ‘result’ [-Wunused-variable]"
-                    "regexp": "^(.*):(\\d+):(\\d+):\\s+(warning|error):\\s+(.*)$",
-                    "file": 1,
-                    "line": 2,
-                    "column": 3,
-                    "severity": 4,
-                    "message": 5    
-                }]
         },
         "options": {
-            "cwd": "${fileDirname}"
+            "cwd": "${fileDirname}/",
         },
-        "group": {
-            "kind": "build",
-            "isDefault": false
-        }
-    },
-    {
-        "label": "Run all tests",
-        "type": "shell",
-        "command": "make all",
-        "presentation": {
-            "reveal": "never"
-        },
-        "problemMatcher": [
+        "command": " if [[ ${fileDirnameBasename} == tests ]]; then touch ${file}; cd .. && make check-single-bin BIN_NAME=tests/${fileBasenameNoExtension}; else touch ${file}; make; fi",
+        "problemMatcher": ["$gcc",
             {
                 "owner": "make",
                 "fileLocation":[
@@ -60,26 +30,24 @@
                 },
             }
         ],
-        "options": {
-            "cwd": "${fileDirname}"
-        },
         "group": {
             "kind": "build",
-            "isDefault": false
+            "isDefault": true
         }
     },
     {
         "label": "Build single test",
-        "detail": "To be run from a test file in a tests directory, and the Makefile in its parent directory",
+        "detail": "Builds and runs a single test (open file in editor)",
         "type": "shell",
         "presentation": {
-            "reveal": "never"
+            "reveal": "always",
+            "focus": true
         },
         "options": {
-            "cwd": "${fileDirname}/../"
+            "cwd": "${fileDirname}/..",
         },
         "command": "make check-single-bin BIN_NAME=tests/${fileBasenameNoExtension}",
-        "problemMatcher": [
+        "problemMatcher": ["$gcc",
             {
                 "owner": "make",
                 "fileLocation":[
@@ -95,7 +63,8 @@
                 "kind": "file"
                 },
             }
-        ],
+        ]
     }
+    
 ]
 }
