@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project version="4">
+  <component name="CLionExternalBuildManager">
+    <target id="a0879fa6-b5f9-4b0a-a8b8-9611bc44b8ff" name="Build all" defaultType="TOOL">
+      <configuration id="b2026fb0-7535-4745-bcb3-bed3c08988ab" name="Build all">
+        <build type="TOOL">
+          <tool actionId="Tool_Basic Testing_Make clean" />
+        </build>
+        <clean type="TOOL">
+          <tool actionId="Tool_Basic Testing_Make clean" />
+        </clean>
+      </configuration>
+    </target>
+  </component>
+</project>
