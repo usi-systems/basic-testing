@@ -49,7 +49,12 @@ SUPPRESS_DIAGNOSTICS=yes
 else
 SUPPRESS_DIAGNOSTICS=
 endif
+
 TEST_COLORS=yes
+# $TERM variable not always defined, but required by tput (Eg, CLion run console).
+ifeq ($(TERM),)
+TEST_COLORS=no
+endif
 ifeq ($(TEST_COLORS),no)
 COLOR_RED :=
 COLOR_GREEN :=
@@ -236,7 +241,7 @@ check-single-bin: $(BIN_NAME)
 .PHONY: clean
 clean:
 	rm -f $(PROGRAMS) *-valgrind $(OBJECTS) tests/*.o $(TESTS_BIN) \
-		*.gcov *.gcda  *.gcno tests/*.gcov tests/*.gcda  tests/*.gcno
+		tests/debugme *.gcov *.gcda  *.gcno tests/*.gcov tests/*.gcda  tests/*.gcno
 
 .PHONY: coverage
 coverage:
