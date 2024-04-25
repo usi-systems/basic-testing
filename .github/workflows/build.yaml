@@ -10,12 +10,13 @@ on:
   workflow_dispatch:
 
 jobs:
-  matrix:
+  test:
     strategy:
-      matrix: [ubuntu-latest, macos-latest]
+      matrix:
+        os: [ubuntu-latest, macos-latest]
 
-  steps:
+    steps:
     - uses: actions/checkout@v4
 
-    - name: Execute tests
+    - name: Run tests
       run: make
