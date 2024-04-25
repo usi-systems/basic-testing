@@ -15,6 +15,7 @@ jobs:
       matrix: [ubuntu-latest, macos-latest]
 
   steps:
-  - uses: actions/checkout@v4
-  - name: Execute tests
-    run: make
+    - uses: actions/checkout@v4
+
+    - name: Execute tests
+      run: make
