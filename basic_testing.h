@@ -19,6 +19,8 @@
 #ifndef BASIC_TESTING_H_INCLUDED
 #define BASIC_TESTING_H_INCLUDED
 
+#include <stddef.h>
+#include <stdint.h>
 #include <dlfcn.h>
 #include <stdlib.h>
 #include <stdio.h>
@@ -228,6 +230,87 @@ static unsigned int bt_alloc_failure_mode = 0;
 #define ALLOC_NO_FAIL bt_alloc_failure_mode = 0;
 // Sets all allocations to fail
 #define ALLOC_FAIL_ALL bt_alloc_failure_mode = 1;
+
+#define BT_HASH_TABLE_SIZE 100
+
+
+struct bt_hash_node {
+    uint8_t address[sizeof(void *)];
+    struct bt_hash_node * next;
+};
+
+struct bt_hash_set {
+    struct bt_hash_node * table[BT_HASH_TABLE_SIZE];
+
+    void *(*allocator)(size_t);
+    void (*deallocator)(void *);
+};
+
+BT_POSSIBLY_UNUSED
+static void bt_hash_set_init(struct bt_hash_set *set) {
+    memset(set->table, 0, sizeof(set->table));
+    set->allocator = malloc;
+    set->deallocator = free;
+}
+
+BT_POSSIBLY_UNUSED
+static void bt_hash_set_delete(struct bt_hash_set *set) {
+    for (size_t i = 0; i < BT_HASH_TABLE_SIZE; ++i) {
+	struct bt_hash_node *p = set->table[i];
+	while (p) {
+	    struct bt_hash_node *tmp = p;	  
+	    p = p->next;
+	    set->deallocator(tmp);
+	}
+    }
+
+}
+
+BT_POSSIBLY_UNUSED
+static size_t bt_hash_set_size(struct bt_hash_set *set) {
+    size_t size = 0;
+
+    for (size_t i = 0; i < BT_HASH_TABLE_SIZE; ++i)
+	for (struct bt_hash_node *p = set->table[i]; p; p = p->next)
+	    ++size;
+
+    return size;
+}
+
+static size_t bt_hash_function(void *address) {
+    size_t hash_value = 0;
+    uint8_t key[sizeof(void *)];
+    memcpy(key, &address, sizeof(void *));
+
+    for (size_t i = 0; i < sizeof(void *); ++i) {
+	hash_value += key[i];
+	hash_value %= BT_HASH_TABLE_SIZE;
+    }
+
+    return hash_value;
+}
+
+BT_POSSIBLY_UNUSED
+static int bt_hash_set_insert(struct bt_hash_set *set, void *address) {
+    size_t hash_value = bt_hash_function(address);
+
+    struct bt_hash_node *node = set->table[hash_value];
+
+    for (; node; node = node->next)
+	if (memcmp(&address, node->address, sizeof(void *)) == 0)
+	    return 0;
+
+    node = (struct bt_hash_node *) set->allocator(sizeof(struct bt_hash_node));
+    if (!node) return 0;
+
+    memcpy(node->address, &address, sizeof(void *));
+    node->next = set->table[hash_value];
+    set->table[hash_value] = node;
+
+    return 1;
+}
+
+
 
 
 BT_POSSIBLY_UNUSED

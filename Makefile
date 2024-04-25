@@ -2,7 +2,7 @@
 all: all-examples
 
 EXAMPLES = ex/example1 ex/example2 ex/example3 ex/example4 \
-	ex/example5 ex/example6 ex/example7 ex/example8 ex/example10 \
+	ex/example5 ex/example6 ex/example7 ex/example8 ex/memory_checks \
 	'ex ws/example1 ws' 'ex ws/example2 ws' 'ex ws/example3 ws' 'ex ws/example4 ws' \
 	'ex ws/example5 ws' 'ex ws/example6 ws' 'ex ws/example7 ws' 'ex ws/example8 ws'
 
@@ -15,7 +15,7 @@ all-examples:
 	   $(MAKE) -C "$$ex" TEST_COLORS=no > "$$ex".out || test_result=FAIL ; \
 	   if test -r "$$ex".expected; \
 	   	then { IFS=''; while read l; \
-	   	        do if fgrep -q "$$l" "$$ex".out; \
+	   	        do if grep -Fq "$$l" "$$ex".out; \
 			   then : ; \
 	   		   else echo "'$$ex.out' must contain '$$l'"; \
 	   		        test_result=FAIL; \
