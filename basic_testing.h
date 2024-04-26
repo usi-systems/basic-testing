@@ -310,7 +310,30 @@ static int bt_hash_set_insert(struct bt_hash_set *set, void *address) {
     return 1;
 }
 
+BT_POSSIBLY_UNUSED
+static int bt_hash_set_remove(struct bt_hash_set *set, void *address) {
+    size_t hash_value = bt_hash_function(address);
 
+    struct bt_hash_node *node = set->table[hash_value];
+    if (!node) return 0;
+
+    if (memcmp(&address, node->address, sizeof(void *)) == 0) {
+	struct bt_hash_node *tmp = node;
+	set->table[hash_value] = tmp->next;
+	set->deallocator(tmp);
+	return 1;
+    }
+
+    for (; node->next; node = node->next)
+	if (memcmp(&address, node->next->address, sizeof(void *)) == 0) {
+	    struct bt_hash_node *tmp = node->next;
+	    node->next = tmp->next;
+	    set->deallocator(tmp);
+	    return 1;
+	}
+
+    return 0;
+}
 
 
 BT_POSSIBLY_UNUSED
