@@ -7,7 +7,7 @@
         "detail": "Runs all tests, or a single test when opened in the editor",
         "type": "shell",
         "presentation": {
-            "reveal": "never"
+            "reveal": "always"
         },
         "options": {
             "cwd": "${fileDirname}/",

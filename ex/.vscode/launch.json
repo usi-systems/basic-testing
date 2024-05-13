@@ -5,7 +5,7 @@
     "version": "0.2.0",
     "configurations": [
         {
-            "name": "debug current test (gdb)",
+            "name": "debug library test (gdb/lldb)",
             // Requires C/C++ extension from Microsoft
             "type": "cppdbg",
             "request": "launch",
@@ -28,7 +28,30 @@
                 }
             ],
         },
-
+        {
+            "name": "debug binary IO (gdb/lldb)",
+            // Requires C/C++ extension from Microsoft
+            "type": "cppdbg",
+            "request": "launch",
+            "cwd": "${fileDirname}",
+            "preLaunchTask": "Build and run tests",
+            "program": "${fileDirname}/${fileBasenameNoExtension}",
+            "args": ["-d", "<", "tests/${input:test}"],
+            // Requires C/C++ extension from Microsoft
+            "MIMode": "${input:debugger}",
+            "setupCommands": [
+                {
+                    "description": "Enable pretty-printing for gdb",
+                    "text": "-enable-pretty-printing",
+                    "ignoreFailures": true
+                },
+                {
+                    "description": "Set Disassembly Flavor to Intel",
+                    "text": "-gdb-set disassembly-flavor intel",
+                    "ignoreFailures": true
+                }
+            ],
+        },
     ],
     "inputs": [
         {
@@ -41,5 +64,17 @@
           ],
           "default": "gdb"
         },
+        {
+            "type": "pickString",
+            "id": "test",
+            "description": "Pick the input file to pass to the program",
+            // TODO: make it so it's generated at runtime, or on test generation!
+            "options": [
+              "test0.in",
+              "test1.in",
+              "test2.in",
+            ],
+            "default": "gdb"
+          },
     ],
 }
