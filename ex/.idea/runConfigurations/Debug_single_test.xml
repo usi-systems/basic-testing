@@ -1,5 +1,5 @@
 <component name="ProjectRunConfigurationManager">
-  <configuration default="false" name="Debug single test" type="CLionNativeAppRunConfigurationType" focusToolWindowBeforeRun="true" PROGRAM_PARAMS="-d" REDIRECT_INPUT="false" ELEVATE="false" USE_EXTERNAL_CONSOLE="false" EMULATE_TERMINAL="true" WORKING_DIR="file://$ProjectFileDir$" PASS_PARENT_ENVS_2="true" PROJECT_NAME="example5" TARGET_NAME="Build all" CONFIG_NAME="Build all" version="1" RUN_PATH="tests/$PATH_TO_DEBUG$">
+  <configuration default="false" name="Debug single test" type="CLionNativeAppRunConfigurationType" focusToolWindowBeforeRun="true" PROGRAM_PARAMS="-d" REDIRECT_INPUT="false" ELEVATE="false" USE_EXTERNAL_CONSOLE="false" EMULATE_TERMINAL="true" WORKING_DIR="file://$ProjectFileDir$" PASS_PARENT_ENVS_2="true" PROJECT_NAME="example8" TARGET_NAME="Build all" CONFIG_NAME="Build all" version="1" RUN_PATH="tests/debugme">
     <method v="2">
       <option name="ToolBeforeRunTask" enabled="true" actionId="Tool_Basic Testing_Run " />
       <option name="ToolBeforeRunTask" enabled="true" actionId="Tool_Basic Testing_Create debug file" />
