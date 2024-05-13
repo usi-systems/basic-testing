@@ -43,3 +43,45 @@
 - [x] VScode not showning tasks anymore (ex/example11)
   -> .vscode or .idea folder must be in root of the project 
 
+## 10.05
+
+- Will there ever be test sets with more than one of IO / sh / c-cxx? 
+  - (y/n): (__**Kinda, shell could also be IO, but all confined in .sh file**__)
+  - Specific run configuration file for each type of set?
+  - makefile to make all decisions, based on `TESTS_(IO|SH|C|CXX)` variables?
+
+- Types
+  - Shell: Used to test/run binary implementation with specific arguments (e.g cli), (!?!)or other uses?
+  - I/O: Used to test/run binary implementation, with specific stdin, and expected output
+  - c/cpp src files: Used to test library implementations
+
+- Debugging problems:
+  - Library: None, just copy the test
+  - Binary programs: 
+    - how to select the correct compiled binary, to copy into a file named `debugme`?
+      - Need to open src file anyway?
+      - Makefile script to choose when project is library, or test suite, so which compiled binary to copy. 
+    - usually I/O or shell, so see below problems
+  - Shell: 
+    - how to get the arguments present in the shell script, to pass to the binary?
+  - I/O: choose which .in file to run
+    - Manual prompt?
+
+
+- Proposal:
+  - Common `Run all` configuration
+    - CLion: Run configuration (Button)
+    - VScode: Run task, instructions needed for keyboard shortcut
+      - <kbd>Ctrl</kbd> + <kbd>Shift</kbd> + <kbd>B</kbd>
+  - Specific debug configuration, for each test suite type (either)
+    - Library: currently open `test.c` or `test.cc` file
+    - IO: prompt to pickup file for stdin redirect
+      - Clion: either file, or name prompt
+      - VScode: can be configurable/generetable, by adding a specific field at the end of the file
+
+### TODO
+
+- [ ] Stabilize current solution
+  - [ ] Check which files are necessary to make everything work
+- [ ] explore debugging for sh files
+- [ ] ocmplete section 1 of report, start section 2
