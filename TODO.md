@@ -26,3 +26,20 @@
   ```
 -> Nope
 
+## 26.04
+
+- [ ] look workings with shell/IO tests
+  - Run can just run everything
+  - Debug has to make choiches, so better to have a debug target handling it?:
+    - make debug file.ext
+    - > if ext == c; then compile, cp to debugme, and run it (ez, done);
+      > if ext == in | expected; then needs some input redirection (hard);
+      > if ext == sh; then needs to run the program as in the shell script?? (Hardest);
+- [x] investigate files appearing when running run configurations
+  - ? touch only with `if [[ -f ... ]]; then touch ... fi;`?
+  - touch $fileName$ can create file in projectDir directory;
+  -> TODO: should all be from same dir as makefile, instead of projectDir?
+- [ ] analyze problem of shell scripts (when/where interpreter is chosen)
+- [x] VScode not showning tasks anymore (ex/example11)
+  -> .vscode or .idea folder must be in root of the project 
+
