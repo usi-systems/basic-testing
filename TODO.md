@@ -82,6 +82,19 @@
 ### TODO
 
 - [ ] Stabilize current solution
-  - [ ] Check which files are necessary to make everything work
+  - Check which files are necessary to make everything work
+  - check that current stuff works
 - [ ] explore debugging for sh files
-- [ ] ocmplete section 1 of report, start section 2
+- [ ] complete section 1 of report, start section 2
+
+## 17.05
+
+- Linker: wrap (dll-library to substitute symbols)
+  - anche per test IO
+    - studente crea un main
+    - altro programma con "vero" main, va a chiamare main altro!
+    - linker:`--wrap = main`
+    - Take every undefined reference to symbol, and transform in symbol `__wrap_symbol_`
+    - => define wrapper 
+  - IO: intercept stodut of program: more difficult
+  - New version: capture IO functions (mostly O), for pinpoint comparison!
