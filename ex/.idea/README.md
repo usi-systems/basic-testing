@@ -10,5 +10,6 @@
 
 Contains:
 - 2 configurations
-  - Run: to run a single test file (file in the `tests/` folder) selected in the editor, or all the tests when an implementation file is selected (or any file in the same folder as the `Makefile`)
-  - Debug Single test: when run in `Debug` mode, allows to use the integrated debugger of CLion to debug a test (opened and selected in the editor) 
+  - `Run`: to run a single test file (file in the `tests/` folder) selected in the editor, or all the tests when an implementation file is selected (or any file in the same folder as the `Makefile`)
+  - `Debug Single test`: when run in `Debug` mode, allows to use the integrated debugger of CLion to debug a test (opened and selected in the editor) 
+  - `Debug IO`: when run in `Debug` mode, allows to debug the IO tests (with `test.in` and `test.out` files)
