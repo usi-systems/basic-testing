@@ -225,47 +225,57 @@ static int check_cmp_double (double x, double y, const char * op,
 static unsigned int bt_alloc_failure_mode = 0;
 
 // Sets all allocation mode to suceed (default)
-#define ALLOC_NO_FAIL bt_alloc_failure_mode = 0;
+#define ALLOC_NO_FAIL bt_alloc_failure_mode = 0
 // Sets all allocations to fail
-#define ALLOC_FAIL_ALL bt_alloc_failure_mode = 1;
+#define ALLOC_FAIL_ALL bt_alloc_failure_mode = 1
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+void* __real_malloc(size_t);
+void __real_free(void*);
+void* __real_realloc(void*,size_t);
 
 BT_POSSIBLY_UNUSED
-void *malloc(size_t size)
+void *__wrap_malloc(size_t size)
 {
-    static void *(*libc_malloc)(size_t) = NULL;
-    if (!libc_malloc)
-        libc_malloc = (void *(*)(size_t))dlsym(RTLD_NEXT , "malloc");
+    // static void *(*libc_malloc)(size_t) = NULL;
+    // if (!libc_malloc)
+    //     libc_malloc = (void *(*)(size_t))dlsym(RTLD_NEXT , "malloc");
 
     if (bt_alloc_failure_mode)
 	return NULL;
 
-    return libc_malloc(size);
+    return __real_malloc(size);
 }
 
 BT_POSSIBLY_UNUSED
-void free(void * ptr)
+void __wrap_free(void * ptr)
 { 
-    static void (*libc_free)(void *) = NULL;
+    // static void (*libc_free)(void *) = NULL;
 
-    if (!libc_free)
-	libc_free = (void (*)(void *)) dlsym(RTLD_NEXT, "free");
+    // if (!libc_free)
+	// libc_free = (void (*)(void *)) dlsym(RTLD_NEXT, "free");
 
-    libc_free(ptr);
+    __real_free(ptr);
 }
 
 BT_POSSIBLY_UNUSED
-void *realloc(void * ptr, size_t new_size )
+void *__wrap_realloc(void * ptr, size_t new_size )
 { 
-    static void *(*libc_realloc)(void *, size_t) = NULL;
-    if (!libc_realloc)
-	libc_realloc = (void *(*)(void *,size_t)) dlsym(RTLD_NEXT , "realloc");
+    // static void *(*libc_realloc)(void *, size_t) = NULL;
+    // if (!libc_realloc)
+	// libc_realloc = (void *(*)(void *,size_t)) dlsym(RTLD_NEXT , "realloc");
 
     if (bt_alloc_failure_mode)
 	return NULL;
 
-    return libc_realloc(ptr, new_size);
+    return __real_realloc(ptr, new_size);
 }
+
+#ifdef __cplusplus
+} /* extern "C" */
+#endif
 
 BT_POSSIBLY_UNUSED
 static int bt_fork_tests = 1;

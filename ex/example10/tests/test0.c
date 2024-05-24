@@ -24,7 +24,7 @@ TEST(fail_all_malloc) {
 }
 
 TEST(fail_first_malloc) {
-    ALLOC_FAIL_ALL
+    ALLOC_FAIL_ALL;
     struct foo *ptr = alloc_foo();
     CHECK(ptr == NULL);
 
@@ -53,7 +53,7 @@ TEST(fail_all_realloc) {
 TEST(fail_first_realloc) {
     struct foo *ptr0 = alloc_foo();
 
-    ALLOC_FAIL_ALL
+    ALLOC_FAIL_ALL;
     struct foo *ptr1 = realloc_foo(ptr0);
     CHECK(ptr1 == NULL);
 
