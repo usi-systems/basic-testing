@@ -1,6 +1,7 @@
-CFLAGS=-Wall -g $(COVERAGE_FLAGS) -Wl,--no-as-needed -ldl -D_GNU_SOURCE
-CXXFLAGS=-Wall -g $(COVERAGE_FLAGS) -Wl,--no-as-needed -ldl -D_GNU_SOURCE
+CFLAGS=-Wall -Werror -g $(COVERAGE_FLAGS)
+CXXFLAGS=-Wall -Werror -g $(COVERAGE_FLAGS)
 
+WRAP_FLAGS := -Wl,--wrap=malloc,--wrap=free,--wrap=realloc
 COVERAGE_FLAGS=$(if $(WITH_COVERAGE),--coverage,)
 
 SHELL=/bin/bash
@@ -154,6 +155,7 @@ check-io-sh: compile $(TESTS_IO) $(TESTS_SH) $(PROGRAMS_DRIVERS)
 		$(SCRIPT_CHECK_ERR_FILE); \
 	done; \
 	for t in $(TESTS_SH_NAMES); do \
+		echo "$$t" ; \
 		test_start "$$t"; \
 		$(SHELL) "$(TESTS_DIR)/$$t.sh" "$(PROGRAMS_CWD)/$$p"  $(SCRIPT_HANDLE_OUT_ERR_TEST) &\
 		$(SCRIPT_GET_TEST_RESULT); \
@@ -181,10 +183,10 @@ check-io-sh: compile $(TESTS_IO) $(TESTS_SH) $(PROGRAMS_DRIVERS)
 	test_summary 'Summary: PASS '
 
 $(TESTS_DIR)/%: $(TESTS_DIR)/%.c $(OBJECTS)
-	$(CC) $(CFLAGS) $(LDFLAGS) $(TESTS_DIR)/$*.c $(OBJECTS) -o $@
+	$(CC) $(CFLAGS) $(LDFLAGS) $(WRAP_FLAGS) $(TESTS_DIR)/$*.c $(OBJECTS) -o $@
 
 $(TESTS_DIR)/%: $(TESTS_DIR)/%.cc $(OBJECTS)
-	$(CXX) -std=c++11 $(CXXFLAGS) $(LDFLAGS) $(TESTS_DIR)/$*.cc $(OBJECTS) -o $@
+	$(CXX) -std=c++11 $(CXXFLAGS) $(LDFLAGS) $(WRAP_FLAGS) $(TESTS_DIR)/$*.cc $(OBJECTS) -o $@
 
 .PHONY: check-bin
 check-bin: $(TESTS_BIN)

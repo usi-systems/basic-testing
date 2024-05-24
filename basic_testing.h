@@ -19,13 +19,14 @@
 #ifndef BASIC_TESTING_H_INCLUDED
 #define BASIC_TESTING_H_INCLUDED
 
+#include <stdatomic.h>
 #include <stddef.h>
 #include <stdint.h>
-#include <dlfcn.h>
 #include <stdlib.h>
 #include <stdio.h>
 #include <stdint.h>
 #include <string.h>
+#include <sys/cdefs.h>
 
 #ifdef __cplusplus
 #include <iostream>
@@ -221,60 +222,52 @@ static int check_cmp_double (double x, double y, const char * op,
 
 #define CHECK_DOUBLE_CMP(X,OP,Y) CHECK_CMP(X,OP,Y)
 
-/* Malloc instrumentation
-*/
 
-static unsigned int bt_alloc_failure_mode = 0;
 
-// Sets all allocation mode to suceed (default)
-#define ALLOC_NO_FAIL bt_alloc_failure_mode = 0;
-// Sets all allocations to fail
-#define ALLOC_FAIL_ALL bt_alloc_failure_mode = 1;
+static int bt_fail_mem_allocs = 0;
+
+#define BT_FAIL_MEM_ALLOCATIONS bt_fail_mem_allocs = 1
+#define BT_RESET_MEM_ALLOCATOR bt_fail_mem_allocs = 0
+
 
 #define BT_HASH_TABLE_SIZE 100
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
+extern void *__real_malloc(size_t);
+extern void __real_free(void *);
+extern void *__real_realloc(void *, size_t);
+
+#ifdef __cplusplus
+}
+#endif
 
 struct bt_hash_node {
     uint8_t address[sizeof(void *)];
+    size_t size;
     struct bt_hash_node * next;
 };
 
-struct bt_hash_set {
-    struct bt_hash_node * table[BT_HASH_TABLE_SIZE];
+BT_POSSIBLY_UNUSED
+static struct bt_hash_node * bt_memory_table[BT_HASH_TABLE_SIZE] = { 0 };
 
-    void *(*allocator)(size_t);
-    void (*deallocator)(void *);
-};
+
 
 BT_POSSIBLY_UNUSED
-static void bt_hash_set_init(struct bt_hash_set *set) {
-    memset(set->table, 0, sizeof(set->table));
-    set->allocator = malloc;
-    set->deallocator = free;
-}
-
-BT_POSSIBLY_UNUSED
-static void bt_hash_set_delete(struct bt_hash_set *set) {
+static void bt_memory_table_free(void) {
     for (size_t i = 0; i < BT_HASH_TABLE_SIZE; ++i) {
-	struct bt_hash_node *p = set->table[i];
+	struct bt_hash_node *p = bt_memory_table[i];
+
 	while (p) {
 	    struct bt_hash_node *tmp = p;	  
 	    p = p->next;
-	    set->deallocator(tmp);
+	    __real_free(tmp);
 	}
+
+	bt_memory_table[i] = NULL;
     }
-
-}
-
-BT_POSSIBLY_UNUSED
-static size_t bt_hash_set_size(struct bt_hash_set *set) {
-    size_t size = 0;
-
-    for (size_t i = 0; i < BT_HASH_TABLE_SIZE; ++i)
-	for (struct bt_hash_node *p = set->table[i]; p; p = p->next)
-	    ++size;
-
-    return size;
 }
 
 static size_t bt_hash_function(void *address) {
@@ -291,36 +284,50 @@ static size_t bt_hash_function(void *address) {
 }
 
 BT_POSSIBLY_UNUSED
-static int bt_hash_set_insert(struct bt_hash_set *set, void *address) {
+static const struct bt_hash_node *bt_memory_table_find(void *address) {
     size_t hash_value = bt_hash_function(address);
-
-    struct bt_hash_node *node = set->table[hash_value];
+    const struct bt_hash_node *node = bt_memory_table[hash_value];
 
     for (; node; node = node->next)
 	if (memcmp(&address, node->address, sizeof(void *)) == 0)
-	    return 0;
+	    return node;
 
-    node = (struct bt_hash_node *) set->allocator(sizeof(struct bt_hash_node));
+    return NULL;
+}
+
+BT_POSSIBLY_UNUSED
+static int bt_memory_table_set(void *address, size_t size) {
+    size_t hash_value = bt_hash_function(address);
+
+    struct bt_hash_node *node = bt_memory_table[hash_value];
+
+    for (; node; node = node->next)
+	if (memcmp(&address, node->address, sizeof(void *)) == 0) {
+	    node->size = size;
+	}
+
+    node = (struct bt_hash_node *) __real_malloc(sizeof(struct bt_hash_node));
     if (!node) return 0;
 
     memcpy(node->address, &address, sizeof(void *));
-    node->next = set->table[hash_value];
-    set->table[hash_value] = node;
+    node->size = size;
+    node->next = bt_memory_table[hash_value];
+    bt_memory_table[hash_value] = node;
 
     return 1;
 }
 
 BT_POSSIBLY_UNUSED
-static int bt_hash_set_remove(struct bt_hash_set *set, void *address) {
+static int bt_memory_table_remove(void *address) {
     size_t hash_value = bt_hash_function(address);
 
-    struct bt_hash_node *node = set->table[hash_value];
+    struct bt_hash_node *node = bt_memory_table[hash_value];
     if (!node) return 0;
 
     if (memcmp(&address, node->address, sizeof(void *)) == 0) {
 	struct bt_hash_node *tmp = node;
-	set->table[hash_value] = tmp->next;
-	set->deallocator(tmp);
+	bt_memory_table[hash_value] = tmp->next;
+	__real_free(tmp);
 	return 1;
     }
 
@@ -328,50 +335,53 @@ static int bt_hash_set_remove(struct bt_hash_set *set, void *address) {
 	if (memcmp(&address, node->next->address, sizeof(void *)) == 0) {
 	    struct bt_hash_node *tmp = node->next;
 	    node->next = tmp->next;
-	    set->deallocator(tmp);
+	    __real_free(tmp);
 	    return 1;
 	}
 
     return 0;
 }
 
-
+#ifdef __cplusplus
+extern "C" {
+#endif
+    
 BT_POSSIBLY_UNUSED
-void *malloc(size_t size)
+void *__wrap_malloc(size_t size)
 {
-    static void *(*libc_malloc)(size_t) = NULL;
-    if (!libc_malloc)
-        libc_malloc = (void *(*)(size_t))dlsym(RTLD_NEXT , "malloc");
+    if (bt_fail_mem_allocs) return NULL;
 
-    if (bt_alloc_failure_mode)
+    void * ret = __real_malloc(size);
+    if (!ret) return NULL;
+
+    if (!bt_memory_table_set(ret, size)) {
+	__real_free(ret);
 	return NULL;
+    }
 
-    return libc_malloc(size);
+    return ret;
 }
 
 BT_POSSIBLY_UNUSED
-void free(void * ptr)
-{ 
-    static void (*libc_free)(void *) = NULL;
-
-    if (!libc_free)
-	libc_free = (void (*)(void *)) dlsym(RTLD_NEXT, "free");
-
-    libc_free(ptr);
+void __wrap_free(void * ptr)
+{
+    bt_memory_table_remove(ptr);
+    __real_free(ptr);
 }
 
 BT_POSSIBLY_UNUSED
-void *realloc(void * ptr, size_t new_size )
+void *__wrap_realloc(void * ptr, size_t new_size)
 { 
-    static void *(*libc_realloc)(void *, size_t) = NULL;
-    if (!libc_realloc)
-	libc_realloc = (void *(*)(void *,size_t)) dlsym(RTLD_NEXT , "realloc");
-
-    if (bt_alloc_failure_mode)
+    if (bt_fail_mem_allocs)
 	return NULL;
 
-    return libc_realloc(ptr, new_size);
+    return __real_realloc(ptr, new_size);
 }
+
+#ifdef __cplusplus
+}
+#endif
+
 
 BT_POSSIBLY_UNUSED
 static int bt_fork_tests = 1;
@@ -423,8 +433,11 @@ BT_POSSIBLY_UNUSED static unsigned int bt_pass_count = 0;
 
 BT_POSSIBLY_UNUSED
 static int bt_run_test(const struct bt_test_descriptor * t) {
-    if (RUNNING_ON_VALGRIND || !bt_fork_tests)
-	return t->test_function();
+    if (RUNNING_ON_VALGRIND || !bt_fork_tests) {
+	int result = t->test_function();
+	BT_RESET_MEM_ALLOCATOR;
+	return result;
+    }
     pid_t pid;
     /* Make sure the child starts with empty I/O buffers. */
     fflush(stdout);
