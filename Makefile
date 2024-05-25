@@ -37,4 +37,3 @@ clean:
 
 veryclean: clean
 	for ex in $(EXAMPLES); do rm -f "$$ex"/tests/basic_testing.h; done
-

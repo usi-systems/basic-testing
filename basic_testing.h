@@ -19,14 +19,12 @@
 #ifndef BASIC_TESTING_H_INCLUDED
 #define BASIC_TESTING_H_INCLUDED
 
-#include <stdatomic.h>
 #include <stddef.h>
 #include <stdint.h>
 #include <stdlib.h>
 #include <stdio.h>
 #include <stdint.h>
 #include <string.h>
-#include <sys/cdefs.h>
 
 #ifdef __cplusplus
 #include <iostream>
@@ -223,6 +221,15 @@ static int check_cmp_double (double x, double y, const char * op,
 #define CHECK_DOUBLE_CMP(X,OP,Y) CHECK_CMP(X,OP,Y)
 
 
+BT_POSSIBLY_UNUSED
+static int bt_fork_tests = 1;
+
+BT_POSSIBLY_UNUSED
+static unsigned int bt_timeout = 3; /* three seconds */
+
+BT_POSSIBLY_UNUSED
+static int bt_verbose = 1;
+
 
 static int bt_fail_mem_allocs = 0;
 
@@ -349,15 +356,19 @@ extern "C" {
 BT_POSSIBLY_UNUSED
 void *__wrap_malloc(size_t size)
 {
+    if (size == 0) {
+	puts("\nmalloc with size 0 is not portable");
+	if (bt_fork_tests) exit(BT_FAILURE);
+	else abort();
+    }
+
     if (bt_fail_mem_allocs) return NULL;
 
     void * ret = __real_malloc(size);
     if (!ret) return NULL;
 
-    if (!bt_memory_table_set(ret, size)) {
-	__real_free(ret);
-	return NULL;
-    }
+    if (!bt_memory_table_set(ret, size))
+	abort();
 
     return ret;
 }
@@ -365,32 +376,46 @@ void *__wrap_malloc(size_t size)
 BT_POSSIBLY_UNUSED
 void __wrap_free(void * ptr)
 {
-    bt_memory_table_remove(ptr);
+    int found = bt_memory_table_remove(ptr);
+    if (!found) {
+	puts("\nmemory was not allocated via malloc, or possible double free");
+	if (bt_fork_tests) exit(BT_FAILURE);
+	else abort();
+    }
+
     __real_free(ptr);
 }
 
 BT_POSSIBLY_UNUSED
 void *__wrap_realloc(void * ptr, size_t new_size)
-{ 
-    if (bt_fail_mem_allocs)
+{
+    if (new_size == 0) {
+	puts("\nrealloc with size 0 is not portable");
+	if (bt_fork_tests) exit(BT_FAILURE);
+	else abort();
+    }
+
+    if (!ptr)
+	return __wrap_malloc(new_size);
+    else if (bt_fail_mem_allocs)
 	return NULL;
 
-    return __real_realloc(ptr, new_size);
+    void * ret = __real_realloc(ptr, new_size);
+    if (!ret) return NULL;
+
+    if (!bt_memory_table_set(ret, new_size))
+	abort();
+
+    if (ret != ptr)
+	bt_memory_table_remove(ptr);
+
+    return ret;
 }
 
 #ifdef __cplusplus
 }
 #endif
 
-
-BT_POSSIBLY_UNUSED
-static int bt_fork_tests = 1;
-
-BT_POSSIBLY_UNUSED
-static unsigned int bt_timeout = 3; /* three seconds */
-
-BT_POSSIBLY_UNUSED
-static int bt_verbose = 1;
 
 struct bt_test_descriptor {
     const char * name;

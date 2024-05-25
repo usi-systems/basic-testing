@@ -4,4 +4,35 @@ Running test 01_fail_allocations...                  PASS
 Running test 01_fail_allocations_cpp...              PASS
 Running test 01_fail_allocations_debug...            PASS
 Running test 01_fail_allocations_debug_cpp...        PASS
-Running test 02_memory_leaks...                      PASS
+Running test 02_allocations_recording...             PASS
+Running test 02_allocations_recording_cpp...         PASS
+Running test 03_double_free...
+memory was not allocated via malloc, or possible double free
+FAIL
+run 'tests/03_double_free' to see what went wrong
+run 'tests/03_double_free -d' with a debugger
+Running test 03_double_free_cpp...
+memory was not allocated via malloc, or possible double free
+FAIL
+run 'tests/03_double_free_cpp' to see what went wrong
+run 'tests/03_double_free_cpp -d' with a debugger
+Running test 03_non_portable_malloc...
+malloc with size 0 is not portable
+FAIL
+run 'tests/03_non_portable_malloc' to see what went wrong
+run 'tests/03_non_portable_malloc -d' with a debugger
+Running test 03_non_portable_malloc_cpp...
+malloc with size 0 is not portable
+FAIL
+run 'tests/03_non_portable_malloc_cpp' to see what went wrong
+run 'tests/03_non_portable_malloc_cpp -d' with a debugger
+Running test 03_non_portable_realloc...
+realloc with size 0 is not portable
+FAIL
+run 'tests/03_non_portable_realloc' to see what went wrong
+run 'tests/03_non_portable_realloc -d' with a debugger
+Running test 03_non_portable_realloc_cpp...
+realloc with size 0 is not portable
+FAIL
+run 'tests/03_non_portable_realloc_cpp' to see what went wrong
+run 'tests/03_non_portable_realloc_cpp -d' with a debugger
