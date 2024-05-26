@@ -235,17 +235,33 @@ static int bt_budget_allocs_enabled = 0;
 static size_t bt_mem_allocs_budget = 0;
 static size_t bt_mem_allocs_budget_curr = 0;
 
+static int bt_budget_bytes_enabled = 0;
+static size_t bt_mem_bytes_budget = 0;
+static size_t bt_mem_bytes_budget_curr = 0;
+
 #define BT_FAIL_MEM_ALLOCATIONS do {		\
 	bt_budget_allocs_enabled = 1;		\
 	bt_mem_allocs_budget = 0;		\
 	bt_mem_allocs_budget_curr = 0;		\
     } while(0)
-#define BT_RESET_MEM_ALLOCATOR  bt_budget_allocs_enabled = 0
+
 #define BT_SET_MEM_ALLOCATION_BUDGET(BUDGET) do {	\
 	bt_budget_allocs_enabled = 1;			\
 	bt_mem_allocs_budget = (BUDGET);		\
 	bt_mem_allocs_budget_curr = (BUDGET);		\
     } while(0)
+
+#define BT_SET_MEM_BYTES_BUDGET(BUDGET) do {		\
+	bt_budget_bytes_enabled = 1;			\
+	bt_mem_bytes_budget = (BUDGET);			\
+	bt_mem_bytes_budget_curr = (BUDGET);		\
+    } while(0)
+
+#define BT_RESET_MEM_ALLOCATOR  do {			\
+	bt_budget_bytes_enabled = 0;			\
+	bt_budget_allocs_enabled = 0;			\
+    } while(0)
+
 
 #define BT_HASH_TABLE_SIZE 100
 
@@ -376,8 +392,7 @@ extern "C" {
 #endif
     
 BT_POSSIBLY_UNUSED
-void *__wrap_malloc(size_t size)
-{
+void *__wrap_malloc(size_t size) {
     if (size == 0) {
 	puts("\nmalloc with size 0 is not portable");
 	if (bt_fork_tests) exit(BT_FAILURE);
@@ -386,11 +401,16 @@ void *__wrap_malloc(size_t size)
 
     if (bt_budget_allocs_enabled && bt_mem_allocs_budget_curr == 0)
 	return NULL;
+    else if (bt_budget_bytes_enabled && bt_mem_bytes_budget_curr < size)
+	return NULL;
 
     void * ret = __real_malloc(size);
     if (!ret) return NULL;
 
-    if (bt_budget_allocs_enabled) --bt_mem_allocs_budget_curr;
+    if (bt_budget_allocs_enabled)
+	--bt_mem_allocs_budget_curr;
+    else if (bt_budget_bytes_enabled)
+	bt_mem_bytes_budget_curr -= size;
 
     if (!bt_memory_table_set(ret, size))
 	abort();
@@ -399,10 +419,9 @@ void *__wrap_malloc(size_t size)
 }
 
 BT_POSSIBLY_UNUSED
-void __wrap_free(void * ptr)
-{
-    int found = bt_memory_table_remove(ptr);
-    if (!found) {
+void __wrap_free(void * ptr) {
+    const struct bt_hash_node *p = bt_memory_table_find(ptr);
+    if (!p) {
 	puts("\nmemory was not allocated via malloc, or possible double free");
 	if (bt_fork_tests) exit(BT_FAILURE);
 	else abort();
@@ -410,13 +429,18 @@ void __wrap_free(void * ptr)
 
     if (bt_budget_allocs_enabled && ++bt_mem_allocs_budget_curr > bt_mem_allocs_budget)
 	bt_mem_allocs_budget_curr = bt_mem_allocs_budget;
+    else if (bt_budget_bytes_enabled) {
+	bt_mem_bytes_budget_curr += p->size;
+	if (bt_mem_bytes_budget_curr > bt_mem_bytes_budget)
+	    bt_mem_bytes_budget_curr = bt_mem_bytes_budget;
+    }
 
+    bt_memory_table_remove(ptr);
     __real_free(ptr);
 }
 
 BT_POSSIBLY_UNUSED
-void *__wrap_realloc(void * ptr, size_t new_size)
-{
+void *__wrap_realloc(void * ptr, size_t new_size) {
     if (new_size == 0) {
 	puts("\nrealloc with size 0 is not portable");
 	if (bt_fork_tests) exit(BT_FAILURE);
@@ -428,10 +452,23 @@ void *__wrap_realloc(void * ptr, size_t new_size)
     else if (bt_budget_allocs_enabled && bt_mem_allocs_budget_curr == 0)
 	return NULL;
 
+    const struct bt_hash_node * node = bt_memory_table_find(ptr);
+    if (!node) {
+	puts("\nrealloc of not heap allocated memory");
+	if (bt_fork_tests) exit(BT_FAILURE);
+	else abort();
+    } else if (bt_budget_bytes_enabled && bt_mem_bytes_budget_curr + node->size < new_size)
+	return NULL;
+
     void * ret = __real_realloc(ptr, new_size);
     if (!ret) return NULL;
 
-    if (bt_budget_allocs_enabled) --bt_mem_allocs_budget_curr;
+    if (bt_budget_allocs_enabled)
+	--bt_mem_allocs_budget_curr;
+    else if (bt_budget_bytes_enabled) {
+	bt_mem_bytes_budget_curr += node->size;
+	bt_mem_bytes_budget_curr -= new_size;
+    }
 
     if (!bt_memory_table_set(ret, new_size))
 	abort();
