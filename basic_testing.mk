@@ -241,7 +241,7 @@ check-single-bin: $(BIN_NAME)
 .PHONY: clean
 clean:
 	rm -f $(PROGRAMS) *-valgrind $(OBJECTS) tests/*.o $(TESTS_BIN) \
-		tests/debugme *.gcov *.gcda  *.gcno tests/*.gcov tests/*.gcda  tests/*.gcno
+		tests/debugme *.gcov *.gcda  *.gcno tests/*.gcov tests/*.gcda  tests/*.gcno tests/*.out
 
 .PHONY: coverage
 coverage:
