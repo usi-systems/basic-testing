@@ -239,7 +239,49 @@ static int check_cmp_ptr (void * x, void * y, const char * op,
 
 #define CHECK_DOUBLE_CMP(X,OP,Y) CHECK_CMP(X,OP,Y)
 
+BT_POSSIBLY_UNUSED
+static size_t bt_malloc_max_count = 0;
+BT_POSSIBLY_UNUSED
+static size_t bt_malloc_max_size = 0;
 
+BT_POSSIBLY_UNUSED
+static void bt_malloc_set_failure (size_t count, size_t size) {
+    bt_malloc_max_count = count;
+    bt_malloc_max_size = size;
+}
+
+BT_POSSIBLY_UNUSED
+static void bt_malloc_reset_failure () {
+    bt_malloc_max_count = 0;
+    bt_malloc_max_size = 0;
+}
+
+#ifdef __cplusplus
+extern "C" {
+#endif
+void *__real_malloc(size_t size);
+
+void *__wrap_malloc(size_t size) {
+    if (bt_malloc_max_count > 0) {
+	if (--bt_malloc_max_count == 0) {
+	    bt_malloc_max_size = 0;
+	    return 0;
+	}
+    }
+    if (bt_malloc_max_size > 0) {
+	if (size < bt_malloc_max_size) {
+	    bt_malloc_max_size -= size;
+	} else {
+	    bt_malloc_max_count = 0;
+	    bt_malloc_max_size = 0;
+	    return 0;
+	}
+    }
+    return __real_malloc(size);
+}
+#ifdef __cplusplus
+}
+#endif
 
 BT_POSSIBLY_UNUSED
 static int bt_fork_tests = 1;
