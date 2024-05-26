@@ -200,11 +200,32 @@ static int check_cmp_double (double x, double y, const char * op,
     return res;
 }
 
+BT_POSSIBLY_UNUSED
+static int check_cmp_ptr (void * x, void * y, const char * op,
+			     const char * x_str, const char * y_str,
+			     const char * filename, int line) {
+    int res;
+    switch (bt_operator(op)) {
+    case BT_EQ: res = (x == y); break;
+    case BT_NE: res = (x != y); break;
+    case BT_LE: res = (x <= y); break;
+    case BT_GE: res = (x >= y); break;
+    case BT_LT: res = (x < y); break;
+    case BT_GT: res = (x > y); break;
+    default: res = 0;
+    }
+    if (!res)
+	printf("\n%s:%d: Assertion '%s %s %s' failed: %p %s %p\n", \
+	       filename, line, x_str, op, y_str, x, op, y);
+    return res;
+}
+
 #define CHECK_CMP(X,OP,Y) do {						\
     if (! _Generic ((Y),						\
                     int : check_cmp_int,				\
            unsigned int : check_cmp_uint,				\
-                 double : check_cmp_double)				\
+		 double : check_cmp_double,				\
+                 void * : check_cmp_ptr)				\
                ((X),(Y),#OP,#X,#Y,__FILE__,__LINE__)) {			\
         TEST_FAILED;							\
     }									\
