@@ -52,3 +52,7 @@ realloc with size 0 is not portable
 FAIL
 run 'tests/03_non_portable_realloc_cpp' to see what went wrong
 run 'tests/03_non_portable_realloc_cpp -d' with a debugger
+Running test 04_budget_allocations...                PASS
+Running test 04_budget_allocations_cpp...            PASS
+Running test 04_budget_allocations_debug...          PASS
+Running test 04_budget_allocations_debug_cpp...      PASS

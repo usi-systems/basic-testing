@@ -231,11 +231,21 @@ BT_POSSIBLY_UNUSED
 static int bt_verbose = 1;
 
 
-static int bt_fail_mem_allocs = 0;
+static int bt_budget_allocs_enabled = 0;
+static size_t bt_mem_allocs_budget = 0;
+static size_t bt_mem_allocs_budget_curr = 0;
 
-#define BT_FAIL_MEM_ALLOCATIONS bt_fail_mem_allocs = 1
-#define BT_RESET_MEM_ALLOCATOR  bt_fail_mem_allocs = 0
-
+#define BT_FAIL_MEM_ALLOCATIONS do {		\
+	bt_budget_allocs_enabled = 1;		\
+	bt_mem_allocs_budget = 0;		\
+	bt_mem_allocs_budget_curr = 0;		\
+    } while(0)
+#define BT_RESET_MEM_ALLOCATOR  bt_budget_allocs_enabled = 0
+#define BT_SET_MEM_ALLOCATION_BUDGET(BUDGET) do {	\
+	bt_budget_allocs_enabled = 1;			\
+	bt_mem_allocs_budget = (BUDGET);		\
+	bt_mem_allocs_budget_curr = (BUDGET);		\
+    } while(0)
 
 #define BT_HASH_TABLE_SIZE 100
 
@@ -374,10 +384,13 @@ void *__wrap_malloc(size_t size)
 	else abort();
     }
 
-    if (bt_fail_mem_allocs) return NULL;
+    if (bt_budget_allocs_enabled && bt_mem_allocs_budget_curr == 0)
+	return NULL;
 
     void * ret = __real_malloc(size);
     if (!ret) return NULL;
+
+    if (bt_budget_allocs_enabled) --bt_mem_allocs_budget_curr;
 
     if (!bt_memory_table_set(ret, size))
 	abort();
@@ -395,6 +408,9 @@ void __wrap_free(void * ptr)
 	else abort();
     }
 
+    if (bt_budget_allocs_enabled && ++bt_mem_allocs_budget_curr > bt_mem_allocs_budget)
+	bt_mem_allocs_budget_curr = bt_mem_allocs_budget;
+
     __real_free(ptr);
 }
 
@@ -409,11 +425,13 @@ void *__wrap_realloc(void * ptr, size_t new_size)
 
     if (!ptr)
 	return __wrap_malloc(new_size);
-    else if (bt_fail_mem_allocs)
+    else if (bt_budget_allocs_enabled && bt_mem_allocs_budget_curr == 0)
 	return NULL;
 
     void * ret = __real_realloc(ptr, new_size);
     if (!ret) return NULL;
+
+    if (bt_budget_allocs_enabled) --bt_mem_allocs_budget_curr;
 
     if (!bt_memory_table_set(ret, new_size))
 	abort();
@@ -472,6 +490,8 @@ BT_POSSIBLY_UNUSED
 static int bt_run_test(const struct bt_test_descriptor * t) {
     if (RUNNING_ON_VALGRIND || !bt_fork_tests) {
 	int result = t->test_function();
+	if (result == BT_FAILURE) return result;
+
 	size_t leak = bt_leaked_bytes();
 
 	if (leak != 0) {
@@ -504,6 +524,8 @@ static int bt_run_test(const struct bt_test_descriptor * t) {
 	if (bt_timeout > 0)
 	    alarm(bt_timeout);
 	int result = t->test_function();
+	if (result == BT_FAILURE) exit(result);
+
 	size_t leak = bt_leaked_bytes();
 
 	if (leak != 0) {
