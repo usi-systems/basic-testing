@@ -1,5 +1,5 @@
 #include "basic_testing.h"
-
+#include <cstdlib>
 extern "C" {
 #include "../array.h"
 }
@@ -246,6 +246,23 @@ TEST(set_lower_budget) {
     array_free(array);
     TEST_PASSED;
 
+}
+
+
+
+TEST(smaller_size_realloc) {
+    BT_SET_MEM_BYTES_BUDGET(8*sizeof(int));
+    int * p = (int *) malloc(8*sizeof(int));
+    CHECK(p != NULL);
+    int * i = (int *) malloc(sizeof(int));
+    CHECK(i == NULL);
+    p = (int *) realloc(p, 4*sizeof(int));
+    CHECK(p != NULL);
+    i = (int *) malloc(sizeof(int));
+    CHECK(i != NULL);
+    free(p);
+    free(i);
+    TEST_PASSED;
 }
 
 

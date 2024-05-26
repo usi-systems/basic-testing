@@ -1,5 +1,6 @@
 #include "basic_testing.h"
 #include "../array.h"
+#include <stdlib.h>
 
 
 
@@ -243,7 +244,22 @@ TEST(set_lower_budget) {
 	CHECK(!array_append(array, i));
     array_free(array);
     TEST_PASSED;
+}
 
+
+TEST(smaller_size_realloc) {
+    BT_SET_MEM_BYTES_BUDGET(8*sizeof(int));
+    int * p = malloc(8*sizeof(int));
+    CHECK(p != NULL);
+    int * i = malloc(sizeof(int));
+    CHECK(i == NULL);
+    p = realloc(p, 4*sizeof(int));
+    CHECK(p != NULL);
+    i = malloc(sizeof(int));
+    CHECK(i != NULL);
+    free(p);
+    free(i);
+    TEST_PASSED;
 }
 
 
@@ -262,4 +278,5 @@ MAIN_TEST_DRIVER(compile,
 		 realloc_null_budget_reset,
 		 realloc_budget_reset,
 		 set_higher_budget,
-		 set_lower_budget);
+		 set_lower_budget,
+		 smaller_size_realloc);
