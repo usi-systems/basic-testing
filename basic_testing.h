@@ -234,7 +234,7 @@ static int bt_verbose = 1;
 static int bt_fail_mem_allocs = 0;
 
 #define BT_FAIL_MEM_ALLOCATIONS bt_fail_mem_allocs = 1
-#define BT_RESET_MEM_ALLOCATOR bt_fail_mem_allocs = 0
+#define BT_RESET_MEM_ALLOCATOR  bt_fail_mem_allocs = 0
 
 
 #define BT_HASH_TABLE_SIZE 100
@@ -311,6 +311,7 @@ static int bt_memory_table_set(void *address, size_t size) {
     for (; node; node = node->next)
 	if (memcmp(&address, node->address, sizeof(void *)) == 0) {
 	    node->size = size;
+	    return 1;
 	}
 
     node = (struct bt_hash_node *) __real_malloc(sizeof(struct bt_hash_node));
@@ -332,9 +333,8 @@ static int bt_memory_table_remove(void *address) {
     if (!node) return 0;
 
     if (memcmp(&address, node->address, sizeof(void *)) == 0) {
-	struct bt_hash_node *tmp = node;
-	bt_memory_table[hash_value] = tmp->next;
-	__real_free(tmp);
+	bt_memory_table[hash_value] = node->next;
+	__real_free(node);
 	return 1;
     }
 
@@ -348,6 +348,18 @@ static int bt_memory_table_remove(void *address) {
 
     return 0;
 }
+
+BT_POSSIBLY_UNUSED
+static size_t bt_leaked_bytes(void) {
+    size_t size = 0;
+
+    for (size_t i = 0; i < BT_HASH_TABLE_SIZE; ++i)
+	for (struct bt_hash_node *p = bt_memory_table[i]; p; p = p->next)
+	    size += p->size;
+
+    return size;
+}
+
 
 #ifdef __cplusplus
 extern "C" {
@@ -460,7 +472,17 @@ BT_POSSIBLY_UNUSED
 static int bt_run_test(const struct bt_test_descriptor * t) {
     if (RUNNING_ON_VALGRIND || !bt_fork_tests) {
 	int result = t->test_function();
+	size_t leak = bt_leaked_bytes();
+
+	if (leak != 0) {
+	    printf("\nLeaked %zu bytes in %s\n", leak, t->name);
+	    BT_RESET_MEM_ALLOCATOR;
+	    bt_memory_table_free();
+	    TEST_FAILED;
+	}
+
 	BT_RESET_MEM_ALLOCATOR;
+	bt_memory_table_free();
 	return result;
     }
     pid_t pid;
@@ -481,7 +503,15 @@ static int bt_run_test(const struct bt_test_descriptor * t) {
 	/* Child: Do the test. */
 	if (bt_timeout > 0)
 	    alarm(bt_timeout);
-	exit(t->test_function());
+	int result = t->test_function();
+	size_t leak = bt_leaked_bytes();
+
+	if (leak != 0) {
+	    printf("\nLeaked %zu bytes in %s\n", leak, t->name);
+	    result = BT_FAILURE;
+	}
+	bt_memory_table_free();
+	exit(result);
     } else {
 	/* Parent: Wait until child terminates and analyze its exit code. */
 	int exit_code;

@@ -16,6 +16,22 @@ memory was not allocated via malloc, or possible double free
 FAIL
 run 'tests/03_double_free_cpp' to see what went wrong
 run 'tests/03_double_free_cpp -d' with a debugger
+Running test 03_memory_leaks...
+Leaked 32 bytes in memory_leak
+FAIL
+run 'tests/03_memory_leaks' to see what went wrong
+run 'tests/03_memory_leaks -d' with a debugger
+Running test 03_memory_leaks_cpp...
+Leaked 32 bytes in memory_leak
+FAIL
+run 'tests/03_memory_leaks_cpp' to see what went wrong
+run 'tests/03_memory_leaks_cpp -d' with a debugger
+Running test 03_memory_leaks_debug...                FAIL
+run 'tests/03_memory_leaks_debug' to see what went wrong
+run 'tests/03_memory_leaks_debug -d' with a debugger
+Running test 03_memory_leaks_debug_cpp...            FAIL
+run 'tests/03_memory_leaks_debug_cpp' to see what went wrong
+run 'tests/03_memory_leaks_debug_cpp -d' with a debugger
 Running test 03_non_portable_malloc...
 malloc with size 0 is not portable
 FAIL

@@ -21,6 +21,11 @@ void array_free(struct array * array) {
     free(array);
 }
 
+void array_free_leak(struct array * array) {
+    free(array);
+}
+
+
 size_t array_length(struct array * array) {
     return array->len;
 }

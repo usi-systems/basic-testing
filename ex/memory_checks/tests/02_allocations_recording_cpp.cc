@@ -56,7 +56,7 @@ TEST(realloc_map_insert) {
     const struct bt_hash_node *node = bt_memory_table_find(array->data);
     CHECK(node != NULL);
     CHECK(node->size == sizeof(int) * array->cap);
-
+    array_free(array);
     TEST_PASSED;
 }
 
@@ -76,7 +76,8 @@ TEST(realloc_map_update) {
     node = bt_memory_table_find(array->data);
     CHECK(node != NULL);
     CHECK(node->size == sizeof(int) * array->cap);
-    
+
+    array_free(array);
     TEST_PASSED;
 }
 
