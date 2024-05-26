@@ -6,12 +6,26 @@ int __wrap_main() {
     // Generate filenames
     // TODO: find good buffer size
     char* basefilename = __FILE__;
+    char infilename[128] = {0};
     char outfilename[128] = {0};
     char exfilename[128] = {0};
+    strncat(infilename, basefilename, strlen(basefilename)-1);
     strncat(outfilename, basefilename, strlen(basefilename)-1);
     strncat(exfilename, basefilename, strlen(basefilename)-1);
+    strcat(infilename, "in");
     strcat(outfilename, "out");
     strcat(exfilename, "expected");
+
+    if (freopen(infilename, "r", stdin) == NULL) {
+        // TODO: check that error is no file, can ignore then, other
+        perror("freopen() for stdin failed");
+    }
+
+    // Temporary test to showcase stdin redirection (from file)
+    int ch;
+    while((ch=getchar()) != EOF) {
+        putchar(ch);
+    }
 
     // redirect stdout to file
     FILE *outfile;
