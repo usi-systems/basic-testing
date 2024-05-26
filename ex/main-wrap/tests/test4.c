@@ -22,10 +22,17 @@ int __wrap_main() {
     int result = __real_main(2, (char*[]) {"diamond", "10"});
     fclose(outfile);
     
-    // compare outputs, char by char
+    // load files and compare outputs, char by char
     // TODO: check that everything works!
-    outfile = fopen(outfilename, "r");
+    if ((outfile = fopen(outfilename, "r")) == NULL) {
+        fprintf(stderr, "Failed to open file %s\n", outfilename);
+        return 1;
+    }
     FILE * exfile = fopen(exfilename, "r");
+    if (exfile == NULL) {
+        fprintf(stderr, "Failed to open file %s\n", exfilename);
+        return 1;
+    }
     int out_ch, ex_ch, row, column = 0;
     for(int i=0; 
         (out_ch = fgetc(outfile)) != EOF 
@@ -34,6 +41,8 @@ int __wrap_main() {
         if (out_ch != ex_ch) {
             fprintf(stderr, "Output char \"%c\" different from expected char \"%c\"\n%s:%d:%d\ncheck respective I/O files for differences\n", 
             out_ch, ex_ch, outfilename,row, column);
+            fclose(outfile);
+            fclose(exfile);
             return 1;
         }
         ++column;
@@ -43,5 +52,7 @@ int __wrap_main() {
         }
     }
     remove(outfilename);
+    fclose(outfile);
+    fclose(exfile);
     return result;
 }
