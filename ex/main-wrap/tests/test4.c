@@ -2,21 +2,19 @@ extern int __real_main(int, char*[]);
 #include <stdio.h>
 #include <string.h>
 
+#define filename(ext) \
+   char ext##_filename[128] = {0}; \
+   strncat( ext##_filename, __FILE__, strlen(__FILE__)-1); \
+   strcat(ext##_filename, #ext)
+
 int __wrap_main() {
     // Generate filenames
     // TODO: find good buffer size
-    char* basefilename = __FILE__;
-    char infilename[128] = {0};
-    char outfilename[128] = {0};
-    char exfilename[128] = {0};
-    strncat(infilename, basefilename, strlen(basefilename)-1);
-    strncat(outfilename, basefilename, strlen(basefilename)-1);
-    strncat(exfilename, basefilename, strlen(basefilename)-1);
-    strcat(infilename, "in");
-    strcat(outfilename, "out");
-    strcat(exfilename, "expected");
+    filename(in);
+    filename(out);
+    filename(expected);
 
-    if (freopen(infilename, "r", stdin) == NULL) {
+    if (freopen(in_filename, "r", stdin) == NULL) {
         // TODO: check that error is no file, can ignore then, other
         perror("freopen() for stdin failed");
     }
@@ -29,7 +27,7 @@ int __wrap_main() {
 
     // redirect stdout to file
     FILE *outfile;
-    if ((outfile = freopen(outfilename, "w", stdout)) == NULL) {
+    if ((outfile = freopen(out_filename, "w", stdout)) == NULL) {
        perror("freopen() failed");
        return 1;
     }
@@ -38,13 +36,13 @@ int __wrap_main() {
     
     // load files and compare outputs, char by char
     // TODO: check that everything works!
-    if ((outfile = fopen(outfilename, "r")) == NULL) {
-        fprintf(stderr, "Failed to open file %s\n", outfilename);
+    if ((outfile = fopen(out_filename, "r")) == NULL) {
+        fprintf(stderr, "Failed to open file %s\n", out_filename);
         return 1;
     }
-    FILE * exfile = fopen(exfilename, "r");
+    FILE * exfile = fopen(expected_filename, "r");
     if (exfile == NULL) {
-        fprintf(stderr, "Failed to open file %s\n", exfilename);
+        fprintf(stderr, "Failed to open file %s\n", expected_filename);
         return 1;
     }
     int out_ch, ex_ch, row, column = 0;
@@ -54,7 +52,7 @@ int __wrap_main() {
     ++i) {
         if (out_ch != ex_ch) {
             fprintf(stderr, "Output char \"%c\" different from expected char \"%c\"\n%s:%d:%d\ncheck respective I/O files for differences\n", 
-            out_ch, ex_ch, outfilename,row, column);
+            out_ch, ex_ch, out_filename,row, column);
             fclose(outfile);
             fclose(exfile);
             return 1;
@@ -65,7 +63,7 @@ int __wrap_main() {
             column = 0;
         }
     }
-    remove(outfilename);
+    remove(out_filename);
     fclose(outfile);
     fclose(exfile);
     return result;
