@@ -202,11 +202,32 @@ static int check_cmp_double (double x, double y, const char * op,
     return res;
 }
 
+BT_POSSIBLY_UNUSED
+static int check_cmp_ptr (void * x, void * y, const char * op,
+			     const char * x_str, const char * y_str,
+			     const char * filename, int line) {
+    int res;
+    switch (bt_operator(op)) {
+    case BT_EQ: res = (x == y); break;
+    case BT_NE: res = (x != y); break;
+    case BT_LE: res = (x <= y); break;
+    case BT_GE: res = (x >= y); break;
+    case BT_LT: res = (x < y); break;
+    case BT_GT: res = (x > y); break;
+    default: res = 0;
+    }
+    if (!res)
+	printf("\n%s:%d: Assertion '%s %s %s' failed: %p %s %p\n", \
+	       filename, line, x_str, op, y_str, x, op, y);
+    return res;
+}
+
 #define CHECK_CMP(X,OP,Y) do {						\
     if (! _Generic ((Y),						\
                     int : check_cmp_int,				\
            unsigned int : check_cmp_uint,				\
-                 double : check_cmp_double)				\
+		 double : check_cmp_double,				\
+                 void * : check_cmp_ptr)				\
                ((X),(Y),#OP,#X,#Y,__FILE__,__LINE__)) {			\
         TEST_FAILED;							\
     }									\
@@ -220,7 +241,6 @@ static int check_cmp_double (double x, double y, const char * op,
 
 #define CHECK_DOUBLE_CMP(X,OP,Y) CHECK_CMP(X,OP,Y)
 
-
 BT_POSSIBLY_UNUSED
 static int bt_fork_tests = 1;
 
@@ -230,25 +250,27 @@ static unsigned int bt_timeout = 3; /* three seconds */
 BT_POSSIBLY_UNUSED
 static int bt_verbose = 1;
 
+static size_t bt_malloc_failure_count = 0;
+static size_t bt_malloc_failure_size = 0;
 
-static int bt_budget_allocs_enabled = 0;
-static size_t bt_mem_allocs_budget = 0;
-static size_t bt_mem_allocs_budget_curr = 0;
+static int bt_malloc_budget_enabled = 0;
+static size_t bt_malloc_budget = 0;
+static size_t bt_malloc_budget_curr = 0;
 
 static int bt_budget_bytes_enabled = 0;
 static size_t bt_mem_bytes_budget = 0;
 static size_t bt_mem_bytes_budget_curr = 0;
 
 #define BT_FAIL_MEM_ALLOCATIONS do {		\
-	bt_budget_allocs_enabled = 1;		\
-	bt_mem_allocs_budget = 0;		\
-	bt_mem_allocs_budget_curr = 0;		\
+	bt_malloc_budget_enabled = 1;		\
+	bt_malloc_budget = 0;		\
+	bt_malloc_budget_curr = 0;		\
     } while(0)
 
 #define BT_SET_MEM_ALLOCATION_BUDGET(BUDGET) do {	\
-	bt_budget_allocs_enabled = 1;			\
-	bt_mem_allocs_budget = (BUDGET);		\
-	bt_mem_allocs_budget_curr = (BUDGET);		\
+	bt_malloc_budget_enabled = 1;			\
+	bt_malloc_budget = (BUDGET);		\
+	bt_malloc_budget_curr = (BUDGET);		\
     } while(0)
 
 #define BT_SET_MEM_BYTES_BUDGET(BUDGET) do {		\
@@ -259,9 +281,21 @@ static size_t bt_mem_bytes_budget_curr = 0;
 
 #define BT_RESET_MEM_ALLOCATOR  do {			\
 	bt_budget_bytes_enabled = 0;			\
-	bt_budget_allocs_enabled = 0;			\
+	bt_malloc_budget_enabled = 0;			\
     } while(0)
 
+
+BT_POSSIBLY_UNUSED
+static void bt_malloc_schedule_failure (size_t count, size_t size) {
+    bt_malloc_failure_count = count;
+    bt_malloc_failure_size = size;
+}
+
+BT_POSSIBLY_UNUSED
+static void bt_malloc_cancel_failure () {
+    bt_malloc_failure_count = 0;
+    bt_malloc_failure_size = 0;
+}
 
 #define BT_HASH_TABLE_SIZE 100
 
@@ -278,15 +312,13 @@ extern void *__real_realloc(void *, size_t);
 #endif
 
 struct bt_hash_node {
-    uint8_t address[sizeof(void *)];
+    void * address;
     size_t size;
     struct bt_hash_node * next;
 };
 
 BT_POSSIBLY_UNUSED
 static struct bt_hash_node * bt_memory_table[BT_HASH_TABLE_SIZE] = { 0 };
-
-
 
 BT_POSSIBLY_UNUSED
 static void bt_memory_table_free(void) {
@@ -303,39 +335,39 @@ static void bt_memory_table_free(void) {
     }
 }
 
+#if WITH_SIMPLE_HASH_FUNCTION
+static size_t bt_hash_function(void * p) {
+    uintptr_t h = (uintptr_t)p;
+    h /= _Alignof(max_align_t);
+    return h;
+}
+#else
 static size_t bt_hash_function(void *address) {
     size_t hash_value = 0;
     uint8_t key[sizeof(void *)];
     memcpy(key, &address, sizeof(void *));
-
     for (size_t i = 0; i < sizeof(void *); ++i) {
 	hash_value += key[i];
-	hash_value %= BT_HASH_TABLE_SIZE;
     }
 
     return hash_value;
 }
-
+#endif
 BT_POSSIBLY_UNUSED
-static const struct bt_hash_node *bt_memory_table_find(void *address) {
-    size_t hash_value = bt_hash_function(address);
-    const struct bt_hash_node *node = bt_memory_table[hash_value];
-
-    for (; node; node = node->next)
-	if (memcmp(&address, node->address, sizeof(void *)) == 0)
+static const struct bt_hash_node * bt_memory_table_find(void *address) {
+    size_t hash_value = bt_hash_function(address) % BT_HASH_TABLE_SIZE;
+    for (const struct bt_hash_node *node = bt_memory_table[hash_value]; node; node = node->next)
+	if (address == node->address)
 	    return node;
-
     return NULL;
 }
 
 BT_POSSIBLY_UNUSED
 static int bt_memory_table_set(void *address, size_t size) {
-    size_t hash_value = bt_hash_function(address);
-
-    struct bt_hash_node *node = bt_memory_table[hash_value];
-
-    for (; node; node = node->next)
-	if (memcmp(&address, node->address, sizeof(void *)) == 0) {
+    size_t hash_value = bt_hash_function(address) % BT_HASH_TABLE_SIZE;
+    struct bt_hash_node * node;
+    for (node = bt_memory_table[hash_value]; node; node = node->next)
+	if (address == node->address) {
 	    node->size = size;
 	    return 1;
 	}
@@ -343,29 +375,29 @@ static int bt_memory_table_set(void *address, size_t size) {
     node = (struct bt_hash_node *) __real_malloc(sizeof(struct bt_hash_node));
     if (!node) return 0;
 
-    memcpy(node->address, &address, sizeof(void *));
+    node->address = address;
     node->size = size;
     node->next = bt_memory_table[hash_value];
     bt_memory_table[hash_value] = node;
-
     return 1;
 }
 
 BT_POSSIBLY_UNUSED
-static int bt_memory_table_remove(void *address) {
-    size_t hash_value = bt_hash_function(address);
+static int bt_memory_table_remove(void * address) {
+    size_t hash_value = bt_hash_function(address) % BT_HASH_TABLE_SIZE;
 
-    struct bt_hash_node *node = bt_memory_table[hash_value];
-    if (!node) return 0;
+    struct bt_hash_node * node = bt_memory_table[hash_value];
+    if (!node)
+	return 0;
 
-    if (memcmp(&address, node->address, sizeof(void *)) == 0) {
+    if (address == node->address) {
 	bt_memory_table[hash_value] = node->next;
 	__real_free(node);
 	return 1;
     }
 
     for (; node->next; node = node->next)
-	if (memcmp(&address, node->next->address, sizeof(void *)) == 0) {
+	if (address == node->next->address) {
 	    struct bt_hash_node *tmp = node->next;
 	    node->next = tmp->next;
 	    __real_free(tmp);
@@ -378,7 +410,6 @@ static int bt_memory_table_remove(void *address) {
 BT_POSSIBLY_UNUSED
 static size_t bt_leaked_bytes(void) {
     size_t size = 0;
-
     for (size_t i = 0; i < BT_HASH_TABLE_SIZE; ++i)
 	for (struct bt_hash_node *p = bt_memory_table[i]; p; p = p->next)
 	    size += p->size;
@@ -398,8 +429,22 @@ void *__wrap_malloc(size_t size) {
 	if (bt_fork_tests) exit(BT_FAILURE);
 	else abort();
     }
-
-    if (bt_budget_allocs_enabled && bt_mem_allocs_budget_curr == 0)
+    if (bt_malloc_failure_count > 0) {
+	if (--bt_malloc_failure_count == 0) {
+	    bt_malloc_failure_size = 0;
+	    return 0;
+	}
+    }
+    if (bt_malloc_failure_size > 0) {
+	if (size < bt_malloc_failure_size) {
+	    bt_malloc_failure_size -= size;
+	} else {
+	    bt_malloc_failure_count = 0;
+	    bt_malloc_failure_size = 0;
+	    return 0;
+	}
+    }
+    if (bt_malloc_budget_enabled && bt_malloc_budget_curr == 0)
 	return NULL;
     else if (bt_budget_bytes_enabled && bt_mem_bytes_budget_curr < size)
 	return NULL;
@@ -407,8 +452,8 @@ void *__wrap_malloc(size_t size) {
     void * ret = __real_malloc(size);
     if (!ret) return NULL;
 
-    if (bt_budget_allocs_enabled)
-	--bt_mem_allocs_budget_curr;
+    if (bt_malloc_budget_enabled)
+	--bt_malloc_budget_curr;
     else if (bt_budget_bytes_enabled)
 	bt_mem_bytes_budget_curr -= size;
 
@@ -427,8 +472,8 @@ void __wrap_free(void * ptr) {
 	else abort();
     }
 
-    if (bt_budget_allocs_enabled && ++bt_mem_allocs_budget_curr > bt_mem_allocs_budget)
-	bt_mem_allocs_budget_curr = bt_mem_allocs_budget;
+    if (bt_malloc_budget_enabled && ++bt_malloc_budget_curr > bt_malloc_budget)
+	bt_malloc_budget_curr = bt_malloc_budget;
     else if (bt_budget_bytes_enabled) {
 	bt_mem_bytes_budget_curr += p->size;
 	if (bt_mem_bytes_budget_curr > bt_mem_bytes_budget)
@@ -446,10 +491,24 @@ void *__wrap_realloc(void * ptr, size_t new_size) {
 	if (bt_fork_tests) exit(BT_FAILURE);
 	else abort();
     }
-
+    if (bt_malloc_failure_count > 0) {
+	if (--bt_malloc_failure_count == 0) {
+	    bt_malloc_failure_size = 0;
+	    return 0;
+	}
+    }
+    if (bt_malloc_failure_size > 0) {
+	if (new_size < bt_malloc_failure_size) {
+	    bt_malloc_failure_size -= new_size;
+	} else {
+	    bt_malloc_failure_count = 0;
+	    bt_malloc_failure_size = 0;
+	    return 0;
+	}
+    }
     if (!ptr)
 	return __wrap_malloc(new_size);
-    else if (bt_budget_allocs_enabled && bt_mem_allocs_budget_curr == 0)
+    else if (bt_malloc_budget_enabled && bt_malloc_budget_curr == 0)
 	return NULL;
 
     const struct bt_hash_node * node = bt_memory_table_find(ptr);
@@ -463,8 +522,8 @@ void *__wrap_realloc(void * ptr, size_t new_size) {
     void * ret = __real_realloc(ptr, new_size);
     if (!ret) return NULL;
 
-    if (bt_budget_allocs_enabled)
-	--bt_mem_allocs_budget_curr;
+    if (bt_malloc_budget_enabled)
+	--bt_malloc_budget_curr;
     else if (bt_budget_bytes_enabled) {
 	bt_mem_bytes_budget_curr += node->size;
 	bt_mem_bytes_budget_curr -= new_size;
