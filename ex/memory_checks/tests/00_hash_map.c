@@ -3,153 +3,156 @@
 
 
 
-static size_t find_map_nodes(void) {
-    size_t nodes = 0;
-
-    for (size_t i = 0; i < BT_HASH_TABLE_SIZE; ++i)
-	for (struct bt_hash_node * p = bt_memory_table[i]; p; p = p->next)
-	    ++nodes;
-
-    return nodes;
-}
-
-
-TEST(compile) {
+TEST (compile) {
     TEST_PASSED;
 }
 
 
-TEST(map_init) {
-    for (size_t i = 0; i < BT_HASH_TABLE_SIZE; ++i)
-	CHECK(bt_memory_table[i] == NULL);
-
-    CHECK_CMP(find_map_nodes(),==,0);
+TEST (map_init) {
+    CHECK (bt_memory_table == NULL);
+    CHECK_CMP (bt_memory_table_size,==,0);
+    CHECK_CMP (bt_memory_table_capacity,==,0);
     TEST_PASSED;
 }
 
 
 TEST(map_find_empty) {
     int i = 0;
-    CHECK(bt_memory_table_find(&i) == NULL);
-    CHECK_CMP(find_map_nodes(),==, 0);
+    CHECK (bt_memory_table_find (&i) == NULL);
     TEST_PASSED;
 }
 
 
-TEST(map_insert) {
+TEST (map_insert) {
     int i = 0;
 
-    CHECK(bt_memory_table_set(&i, 12));
+    CHECK (bt_memory_table_set (&i, 12));
 
-    const struct bt_hash_node * node = bt_memory_table_find(&i);
-    CHECK(node != NULL);
-    CHECK_CMP(node->size,==,12);
-    CHECK(node->address == &i);
-    CHECK_CMP(find_map_nodes(),==,1);
-
-    bt_memory_table_free();
-    CHECK_CMP(find_map_nodes(),==,0);
+    struct bt_hash_node * node = bt_memory_table_find (&i);
+    CHECK (node != NULL);
+    CHECK_CMP (node->size,==,12);
+    CHECK (node->address == &i);
+    CHECK_CMP (bt_memory_table_size,==,1);
+    CHECK (bt_memory_table_size <= bt_memory_table_capacity);
+    bt_memory_table_free ();
+    CHECK (bt_memory_table == NULL);
+    CHECK_CMP (bt_memory_table_size,==,0);
+    CHECK_CMP (bt_memory_table_capacity,==,0);
     TEST_PASSED;
 }
 
 
-TEST(map_update) {
+TEST (map_update) {
     int i = 0;
-    void *p;
 
-    CHECK(bt_memory_table_set(&i, 12));
-    const struct bt_hash_node * node = bt_memory_table_find(&i);
-    CHECK(node != NULL);
-    CHECK_CMP(node->size,==,12);
-    memcpy(&p, node->address, sizeof(void *));
-    CHECK(&i == p);
-    
-    CHECK(bt_memory_table_set(&i, 15));
-    node = bt_memory_table_find(&i);
-    CHECK(node != NULL);
-    CHECK_CMP(node->size,==,15);
-    memcpy(&p, node->address, sizeof(void *));
-    CHECK(&i == p);
-    CHECK_CMP(find_map_nodes(),==,1);
+    CHECK (bt_memory_table_set (&i, 12));
+    struct bt_hash_node * node = bt_memory_table_find (&i);
+    CHECK (node != NULL);
+    CHECK_CMP (node->size,==,12);
+    CHECK (node->address == &i);
+    CHECK (bt_memory_table_size <= bt_memory_table_capacity);
 
-    bt_memory_table_free();
-    CHECK_CMP(find_map_nodes(),==,0);
+    size_t capacity = bt_memory_table_capacity;
+
+    CHECK (bt_memory_table_set (&i, 15));
+    node = bt_memory_table_find (&i);
+    CHECK (node != NULL);
+    CHECK_CMP (node->size,==,15);
+    CHECK (&i == node->address);
+    CHECK_CMP (bt_memory_table_size,==,1);
+    CHECK (bt_memory_table_capacity == capacity);
+
+    bt_memory_table_free ();
+    CHECK (bt_memory_table == NULL);
+    CHECK_CMP (bt_memory_table_size,==,0);
+    CHECK_CMP (bt_memory_table_capacity,==,0);
     TEST_PASSED;
 }
 
 
-TEST(map_insert_collisions) {
-    int items[BT_HASH_TABLE_SIZE*5];
+TEST (map_insert_collisions) {
+    const size_t len = 1024;
+    int items[len];
 
-    for (int i = 0; i < BT_HASH_TABLE_SIZE * 5; ++i)
+    for (size_t i = 0; i < len; ++i)
 	items[i] = i;
 
-    for (size_t i = 0; i < BT_HASH_TABLE_SIZE * 5; ++i)
-	CHECK_CMP(bt_memory_table_set(items + i, items[i]),==,1);
+    for (size_t i = 0; i < len; ++i)
+	CHECK_CMP (bt_memory_table_set (items + i, items[i]),==,1);
 
-    for (size_t i = 0; i < BT_HASH_TABLE_SIZE * 5; ++i) {
-	const struct bt_hash_node * node = bt_memory_table_find(items +i);
-	CHECK(node != NULL);
-	CHECK_CMP(node->size,==,items[i]);
-	CHECK(items + i == node->address);
+    for (size_t i = 0; i < len; ++i) {
+	const struct bt_hash_node * node = bt_memory_table_find (items + i);
+	CHECK (node != NULL);
+	CHECK_CMP (node->size,==,items[i]);
+	CHECK (items + i == node->address);
     }
-    CHECK_CMP(find_map_nodes(),==,5*BT_HASH_TABLE_SIZE);
+    CHECK (bt_memory_table_size == len);
+    CHECK (bt_memory_table_size <= bt_memory_table_capacity);
 
-    bt_memory_table_free();
-    CHECK_CMP(find_map_nodes(),==,0);
+    bt_memory_table_free ();
+    CHECK (bt_memory_table == NULL);
+    CHECK_CMP (bt_memory_table_size,==,0);
+    CHECK_CMP (bt_memory_table_capacity,==,0);
     TEST_PASSED;
 }
 
 
-TEST(map_update_collisions) {
-    int items[BT_HASH_TABLE_SIZE*5];
+TEST (map_update_collisions) {
+    const size_t len = 1024;
+    int items[len];
 
-    for (int i = 0; i < BT_HASH_TABLE_SIZE * 5; ++i)
+    for (size_t i = 0; i < len; ++i)
 	items[i] = i;
 
-    for (size_t i = 0; i < BT_HASH_TABLE_SIZE * 5; ++i)
-	CHECK_CMP(bt_memory_table_set(items + i, items[i]),==,1);
+    for (size_t i = 0; i < len; ++i)
+	CHECK_CMP (bt_memory_table_set (items + i, items[i]),==,1);
 
-    for (size_t i = 0; i < BT_HASH_TABLE_SIZE * 5; ++i) {
-	const struct bt_hash_node * node = bt_memory_table_find(items + i);
-	CHECK(node != NULL);
-	CHECK_CMP(node->size,==,items[i]);
-	CHECK(items + i == node->address);
+    for (size_t i = 0; i < len; ++i) {
+	const struct bt_hash_node * node = bt_memory_table_find (items + i);
+	CHECK (node != NULL);
+	CHECK_CMP (node->size,==,items[i]);
+	CHECK (items + i == node->address);
     }
-    CHECK_CMP(find_map_nodes(),==,5*BT_HASH_TABLE_SIZE);
+    CHECK (bt_memory_table_size == len);
+    CHECK (bt_memory_table_size <= bt_memory_table_capacity);
+    size_t cap = bt_memory_table_capacity;
 
-    for (int i = 0; i < BT_HASH_TABLE_SIZE * 5; ++i)
+    for (size_t i = 0; i < len; ++i)
 	items[i] = 2*i;
     
-    for (size_t i = 0; i < BT_HASH_TABLE_SIZE * 5; ++i)
-	CHECK_CMP(bt_memory_table_set(items + i, items[i]),==,1);
+    for (size_t i = 0; i < len; ++i)
+	CHECK_CMP (bt_memory_table_set (items + i, items[i]),==,1);
 
-    for (size_t i = 0; i < BT_HASH_TABLE_SIZE * 5; ++i) {
-	const struct bt_hash_node * node = bt_memory_table_find(items + i);
-	CHECK(node != NULL);
-	CHECK_CMP(node->size,==,items[i]);
-	CHECK(items + i == node->address);
+    for (size_t i = 0; i < len; ++i) {
+	const struct bt_hash_node * node = bt_memory_table_find (items + i);
+	CHECK (node != NULL);
+	CHECK_CMP (node->size,==,items[i]);
+	CHECK (items + i == node->address);
     }
-    CHECK_CMP(find_map_nodes(),==,5*BT_HASH_TABLE_SIZE);
+    CHECK (bt_memory_table_size == len);
+    CHECK (bt_memory_table_capacity == cap);
 
-    bt_memory_table_free();
-    CHECK_CMP(find_map_nodes(),==,0);
+
+    bt_memory_table_free ();
+    CHECK (bt_memory_table == NULL);
+    CHECK_CMP (bt_memory_table_size,==,0);
+    CHECK_CMP (bt_memory_table_capacity,==,0);
     TEST_PASSED;
 }
 
 
+TEST (map_free) {
+    const size_t len = 1024;
+    int items[len];
 
-TEST(map_free) {
-    int items[BT_HASH_TABLE_SIZE*5];
-
-    for (size_t i = 0; i < BT_HASH_TABLE_SIZE * 5; ++i)
-	CHECK(bt_memory_table_set(items + i, 10));
+    for (size_t i = 0; i < len; ++i)
+	CHECK (bt_memory_table_set (items + i, 10));
 
     bt_memory_table_free();
 
-    for (size_t i = 0; i < BT_HASH_TABLE_SIZE; ++i)
-	CHECK(bt_memory_table[i] == NULL);
-
+    CHECK (bt_memory_table == NULL);
+    CHECK_CMP (bt_memory_table_size,==,0);
+    CHECK_CMP (bt_memory_table_capacity,==,0);
     TEST_PASSED;
 }
 
@@ -157,11 +160,10 @@ TEST(map_free) {
 TEST(map_remove) {
     int x;
     
-    CHECK_CMP(bt_memory_table_set(&x, 10),==,1);
-    CHECK_CMP(bt_memory_table_remove(&x),==,1);
-    CHECK(bt_memory_table_find(&x) == NULL);
-
-    bt_memory_table_free();
+    CHECK (bt_memory_table_set (&x, 10));
+    CHECK (bt_memory_table_remove (&x));
+    CHECK (bt_memory_table_find (&x) == NULL);
+    bt_memory_table_free ();
     TEST_PASSED;
 }
 
@@ -169,24 +171,31 @@ TEST(map_remove) {
 TEST(map_remove_not_found) {
     int x;
 
-    CHECK_CMP(bt_memory_table_remove(&x),==,0);
-    CHECK(bt_memory_table_find(&x) == NULL);
+    CHECK (!bt_memory_table_remove (&x));
+    CHECK (bt_memory_table_find(&x) == NULL);
 
     TEST_PASSED;
 }
 
 
 TEST(map_remove_collisions) {
-    int items[BT_HASH_TABLE_SIZE*5];
+    const size_t len = 1024;
+    int items[len];
 
-    for (size_t i = 0; i < BT_HASH_TABLE_SIZE*5; ++i)
-	CHECK_CMP(bt_memory_table_set(items + i, 10),==,1);
+    for (size_t i = 0; i < len; ++i)
+	CHECK (bt_memory_table_set (items + i, 10));
 
-    for (size_t i = 0; i < BT_HASH_TABLE_SIZE*5; ++i)
-	CHECK_CMP(bt_memory_table_remove(items + i),==,1);
+    CHECK (bt_memory_table_size == len);
+    CHECK (bt_memory_table_size <= bt_memory_table_capacity);
+    size_t cap = bt_memory_table_capacity;
 
-    for (size_t i = 0; i < BT_HASH_TABLE_SIZE*5; ++i)
-	CHECK(bt_memory_table_find(items + i) == NULL);
+    for (size_t i = 0; i < len; ++i)
+	CHECK (bt_memory_table_remove (items + i));
+
+    for (size_t i = 0; i < len; ++i)
+	CHECK (bt_memory_table_find (items + i) == NULL);
+
+    CHECK (cap > bt_memory_table_capacity);
     
     bt_memory_table_free();
     TEST_PASSED;
@@ -194,13 +203,56 @@ TEST(map_remove_collisions) {
 
 
 TEST(map_remove_collisions_not_found) {
-    int items[BT_HASH_TABLE_SIZE*5];
+    const size_t len = 1024;
+    int items[len];
     int x;
 
-    for (size_t i = 0; i < BT_HASH_TABLE_SIZE*5; ++i)
-	CHECK_CMP(bt_memory_table_set(items + i, 10),==,1);
+    for (size_t i = 0; i < len; ++i)
+	CHECK (bt_memory_table_set (items + i, 10));
 
-    CHECK_CMP(bt_memory_table_remove(&x),==,0);
+    CHECK (!bt_memory_table_remove(&x));
+
+    bt_memory_table_free();
+    TEST_PASSED;
+}
+
+
+TEST(map_insert_remove_series) {
+    const size_t len = 1024;
+    int items[len];
+
+    for (size_t i = 0; i < len; ++i)
+	items[i] = i;
+
+    for (size_t i = 0; i < len/2; ++i)
+	CHECK (bt_memory_table_set (items + i, items[i]));
+
+    for (size_t i = 0; i < len/2; ++i) {
+	const struct bt_hash_node * node = bt_memory_table_find (items + i);
+	CHECK (node != NULL);
+	CHECK_CMP (node->size,==,items[i]);
+	CHECK (items + i == node->address);
+    }
+
+    for (size_t i = 0; i < len/4; ++i) {
+	CHECK (bt_memory_table_remove (items + i));
+	CHECK (bt_memory_table_find (items + i) == NULL);
+    }
+    
+    for (size_t i = len/2; i < len; ++i)
+	CHECK (bt_memory_table_set (items + i, items[i]));
+
+    for (size_t i = len/2; i < len; ++i) {
+	const struct bt_hash_node * node = bt_memory_table_find (items + i);
+	CHECK (node != NULL);
+	CHECK_CMP (node->size,==,items[i]);
+	CHECK (items + i == node->address);
+    }
+
+    for (size_t i = len/4; i < len; ++i) {
+	CHECK (bt_memory_table_remove (items + i));
+	CHECK (bt_memory_table_find (items + i) == NULL);
+    }
 
     bt_memory_table_free();
     TEST_PASSED;
@@ -211,10 +263,12 @@ MAIN_TEST_DRIVER(compile,
 		 map_init,
 		 map_find_empty,
 		 map_insert,
+		 map_update,
 		 map_insert_collisions,
 		 map_update_collisions,
 		 map_free,
 		 map_remove,
 		 map_remove_not_found,
 		 map_remove_collisions,
-		 map_remove_collisions_not_found);
+		 map_remove_collisions_not_found,
+		 map_insert_remove_series);

@@ -60,3 +60,7 @@ Running test 05_byte_budget_allocations...           PASS
 Running test 05_byte_budget_allocations_cpp...       PASS
 Running test 05_byte_budget_allocations_debug...     PASS
 Running test 05_byte_budget_allocations_debug_cpp... PASS
+Running test 06_scheduled_failures...                PASS
+Running test 06_scheduled_failures_cpp...            PASS
+Running test 06_scheduled_failures_debug...          PASS
+Running test 06_scheduled_failures_debug_cpp...      PASS

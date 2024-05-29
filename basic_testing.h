@@ -19,6 +19,7 @@
 #ifndef BASIC_TESTING_H_INCLUDED
 #define BASIC_TESTING_H_INCLUDED
 
+#include <stdalign.h>
 #include <stddef.h>
 #include <stdint.h>
 #include <stdlib.h>
@@ -261,6 +262,19 @@ static int bt_budget_bytes_enabled = 0;
 static size_t bt_mem_bytes_budget = 0;
 static size_t bt_mem_bytes_budget_curr = 0;
 
+
+BT_POSSIBLY_UNUSED
+static void bt_malloc_schedule_failure (size_t count, size_t size) {
+    bt_malloc_failure_count = count;
+    bt_malloc_failure_size = size;
+}
+
+BT_POSSIBLY_UNUSED
+static void bt_malloc_cancel_failure () {
+    bt_malloc_failure_count = 0;
+    bt_malloc_failure_size = 0;
+}
+
 #define BT_FAIL_MEM_ALLOCATIONS do {		\
 	bt_malloc_budget_enabled = 1;		\
 	bt_malloc_budget = 0;		\
@@ -282,30 +296,17 @@ static size_t bt_mem_bytes_budget_curr = 0;
 #define BT_RESET_MEM_ALLOCATOR  do {			\
 	bt_budget_bytes_enabled = 0;			\
 	bt_malloc_budget_enabled = 0;			\
+	bt_malloc_cancel_failure ();			\
     } while(0)
 
-
-BT_POSSIBLY_UNUSED
-static void bt_malloc_schedule_failure (size_t count, size_t size) {
-    bt_malloc_failure_count = count;
-    bt_malloc_failure_size = size;
-}
-
-BT_POSSIBLY_UNUSED
-static void bt_malloc_cancel_failure () {
-    bt_malloc_failure_count = 0;
-    bt_malloc_failure_size = 0;
-}
-
-#define BT_HASH_TABLE_SIZE 100
 
 #ifdef __cplusplus
 extern "C" {
 #endif
 
-extern void *__real_malloc(size_t);
+extern void * __real_malloc(size_t);
 extern void __real_free(void *);
-extern void *__real_realloc(void *, size_t);
+extern void * __real_realloc(void *, size_t);
 
 #ifdef __cplusplus
 }
@@ -314,105 +315,144 @@ extern void *__real_realloc(void *, size_t);
 struct bt_hash_node {
     void * address;
     size_t size;
-    struct bt_hash_node * next;
+    int deleted;
 };
 
 BT_POSSIBLY_UNUSED
-static struct bt_hash_node * bt_memory_table[BT_HASH_TABLE_SIZE] = { 0 };
+static struct bt_hash_node * bt_memory_table = NULL;
+static size_t bt_memory_table_size = 0;
+static size_t bt_memory_table_capacity = 0;
 
 BT_POSSIBLY_UNUSED
-static void bt_memory_table_free(void) {
-    for (size_t i = 0; i < BT_HASH_TABLE_SIZE; ++i) {
-	struct bt_hash_node *p = bt_memory_table[i];
+static void bt_memory_table_free (void) {
+    if (bt_memory_table) __real_free (bt_memory_table);
+    bt_memory_table = NULL;
+    bt_memory_table_size = 0;
+    bt_memory_table_capacity = 0;
+}
 
-	while (p) {
-	    struct bt_hash_node *tmp = p;	  
-	    p = p->next;
-	    __real_free(tmp);
-	}
 
-	bt_memory_table[i] = NULL;
+BT_POSSIBLY_UNUSED
+static struct bt_hash_node * bt_memory_table_find (void * address) {
+    if (bt_memory_table == NULL) return NULL;
+
+    uintptr_t h = (uintptr_t) address;
+    h /= alignof(max_align_t);
+    h %= bt_memory_table_capacity;
+    h |= 1;
+    uintptr_t g = h;
+
+    struct bt_hash_node * node = bt_memory_table + h;
+    while ((node->address != address && node->address != NULL) || (node->address == NULL && node->deleted)) {
+	h = (h + g)%bt_memory_table_capacity;
+	node = bt_memory_table + h;
     }
+    if (node->address != address) return NULL;
+
+    return node;
 }
 
-#if WITH_SIMPLE_HASH_FUNCTION
-static size_t bt_hash_function(void * p) {
-    uintptr_t h = (uintptr_t)p;
-    h /= _Alignof(max_align_t);
-    return h;
-}
-#else
-static size_t bt_hash_function(void *address) {
-    size_t hash_value = 0;
-    uint8_t key[sizeof(void *)];
-    memcpy(key, &address, sizeof(void *));
-    for (size_t i = 0; i < sizeof(void *); ++i) {
-	hash_value += key[i];
+BT_POSSIBLY_UNUSED
+static struct bt_hash_node * bt_memory_table_find_or_insert (void * address) {
+    if (bt_memory_table == NULL) return NULL;
+
+    uintptr_t h = (uintptr_t) address;
+    h /= alignof(max_align_t);
+    h %= bt_memory_table_capacity;
+    h |= 1;
+    uintptr_t g = h;
+
+    struct bt_hash_node * node = bt_memory_table + h;
+    while (node->address != address && node->address != NULL) {
+	h = (h + g)%bt_memory_table_capacity;
+	node = bt_memory_table + h;
     }
 
-    return hash_value;
-}
-#endif
-BT_POSSIBLY_UNUSED
-static const struct bt_hash_node * bt_memory_table_find(void *address) {
-    size_t hash_value = bt_hash_function(address) % BT_HASH_TABLE_SIZE;
-    for (const struct bt_hash_node *node = bt_memory_table[hash_value]; node; node = node->next)
-	if (address == node->address)
-	    return node;
-    return NULL;
+    return node;
 }
 
-BT_POSSIBLY_UNUSED
-static int bt_memory_table_set(void *address, size_t size) {
-    size_t hash_value = bt_hash_function(address) % BT_HASH_TABLE_SIZE;
-    struct bt_hash_node * node;
-    for (node = bt_memory_table[hash_value]; node; node = node->next)
-	if (address == node->address) {
-	    node->size = size;
-	    return 1;
-	}
 
-    node = (struct bt_hash_node *) __real_malloc(sizeof(struct bt_hash_node));
-    if (!node) return 0;
+BT_POSSIBLY_UNUSED
+static int bt_memory_table_set (void *address, size_t size) {
+    struct bt_hash_node * node = bt_memory_table_find_or_insert (address);
+
+    if (node && node->address != NULL) {
+	node->size = size;
+	return 1;
+    }
+
+    if (bt_memory_table_size*2 == bt_memory_table_capacity) {
+	size_t new_cap = bt_memory_table_capacity ? 2*bt_memory_table_capacity : 128;
+
+	struct bt_hash_node * new_table =
+	    (struct bt_hash_node *) __real_malloc(new_cap*sizeof(struct bt_hash_node));
+	if (!new_table) return 0;
+
+	memset(new_table, 0, new_cap*sizeof(struct bt_hash_node));
+	struct bt_hash_node * tmp = bt_memory_table;
+	size_t old_cap = bt_memory_table_capacity;
+
+	bt_memory_table = new_table;
+	bt_memory_table_capacity = new_cap;
+	bt_memory_table_size = 0;
+
+	for (size_t i = 0; i < old_cap; ++i)
+	    if (tmp[i].address)
+		bt_memory_table_set (tmp[i].address, tmp[i].size);
+
+	if (tmp) __real_free(tmp);
+	node = bt_memory_table_find_or_insert (address);
+    }
 
     node->address = address;
     node->size = size;
-    node->next = bt_memory_table[hash_value];
-    bt_memory_table[hash_value] = node;
+    node->deleted = 0;
+    ++bt_memory_table_size;
+
     return 1;
 }
 
 BT_POSSIBLY_UNUSED
-static int bt_memory_table_remove(void * address) {
-    size_t hash_value = bt_hash_function(address) % BT_HASH_TABLE_SIZE;
+static int bt_memory_table_remove (void * address) {
+    struct bt_hash_node * node = bt_memory_table_find (address);
+    if (!node) return 0;
 
-    struct bt_hash_node * node = bt_memory_table[hash_value];
-    if (!node)
-	return 0;
+    node->address = NULL;
+    node->deleted = 1;
+    --bt_memory_table_size;
 
-    if (address == node->address) {
-	bt_memory_table[hash_value] = node->next;
-	__real_free(node);
-	return 1;
+    if (bt_memory_table_capacity > 128 && bt_memory_table_size*8 < bt_memory_table_capacity) {
+	size_t new_cap = bt_memory_table_capacity / 8;
+
+	struct bt_hash_node * new_table =
+	    (struct bt_hash_node *) __real_malloc(new_cap*sizeof(struct bt_hash_node));
+	if (!new_table) return 0;
+
+	memset(new_table, 0, new_cap*sizeof(struct bt_hash_node));
+	struct bt_hash_node * tmp = bt_memory_table;
+	size_t old_cap = bt_memory_table_capacity;
+
+	bt_memory_table = new_table;
+	bt_memory_table_capacity = new_cap;
+	bt_memory_table_size = 0;
+
+	for (size_t i = 0; i < old_cap; ++i)
+	    if (tmp[i].address)
+		bt_memory_table_set (tmp[i].address, tmp[i].size);
+
+	__real_free(tmp);
     }
 
-    for (; node->next; node = node->next)
-	if (address == node->next->address) {
-	    struct bt_hash_node *tmp = node->next;
-	    node->next = tmp->next;
-	    __real_free(tmp);
-	    return 1;
-	}
-
-    return 0;
+    return 1;
 }
 
 BT_POSSIBLY_UNUSED
 static size_t bt_leaked_bytes(void) {
     size_t size = 0;
-    for (size_t i = 0; i < BT_HASH_TABLE_SIZE; ++i)
-	for (struct bt_hash_node *p = bt_memory_table[i]; p; p = p->next)
-	    size += p->size;
+
+    for (size_t i = 0; i < bt_memory_table_capacity; ++i)
+	if (bt_memory_table[i].address)
+	    size += bt_memory_table[i].size;
 
     return size;
 }
@@ -491,6 +531,8 @@ void *__wrap_realloc(void * ptr, size_t new_size) {
 	if (bt_fork_tests) exit(BT_FAILURE);
 	else abort();
     }
+    if (!ptr) return __wrap_malloc(new_size);
+
     if (bt_malloc_failure_count > 0) {
 	if (--bt_malloc_failure_count == 0) {
 	    bt_malloc_failure_size = 0;
@@ -506,9 +548,8 @@ void *__wrap_realloc(void * ptr, size_t new_size) {
 	    return 0;
 	}
     }
-    if (!ptr)
-	return __wrap_malloc(new_size);
-    else if (bt_malloc_budget_enabled && bt_malloc_budget_curr == 0)
+
+    if (bt_malloc_budget_enabled && bt_malloc_budget_curr == 0)
 	return NULL;
 
     const struct bt_hash_node * node = bt_memory_table_find(ptr);
