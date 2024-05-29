@@ -266,4 +266,43 @@ TEST(smaller_size_realloc) {
 }
 
 
+TEST(zero_budget_calloc) {
+    BT_SET_MEM_BYTES_BUDGET(0);
+    struct array * array = array_new_calloc();
+    CHECK(array == NULL);
+    TEST_PASSED;
+}
+
+
+TEST(simple_budget_calloc) {
+    BT_SET_MEM_BYTES_BUDGET(sizeof(struct array));
+    struct array * array = array_new_calloc();
+    CHECK(array != NULL);
+    struct array * array2 = array_new_calloc();
+    CHECK(array2 == NULL);
+    array2 = array_new ();
+    CHECK (array2 == NULL);
+    array_free(array);
+    TEST_PASSED;
+}
+
+
+TEST(reallocarray_budget) {
+    BT_SET_MEM_BYTES_BUDGET(sizeof(struct array));
+    struct array * array = array_new_calloc();
+    CHECK(array != NULL);
+    for (int i = 0; i < 4; ++i)
+	CHECK(!array_append_reallocarray(array, i));
+    CHECK_CMP(array_length(array),==,0);
+    CHECK_CMP(array_capacity(array),==,0);
+    BT_SET_MEM_BYTES_BUDGET(sizeof(int)*8);
+    for (int i = 0; i < 4; ++i)
+	CHECK(array_append_reallocarray(array, i));
+    CHECK_CMP(array_length(array),==,4);
+    CHECK_CMP(array_capacity(array),==,8);
+    array_free(array);
+    TEST_PASSED;
+}
+
+
 MAIN_TEST_DRIVER();

@@ -7,7 +7,6 @@ CFLAGS=-Wall -Werror -g $(COVERAGE_FLAGS)
 CXXFLAGS=-Wall -Werror -g $(COVERAGE_FLAGS)
 
 COVERAGE_FLAGS=$(if $(WITH_COVERAGE),--coverage,)
-
 SHELL=/bin/bash
 
 TIMEOUT=8
@@ -186,7 +185,7 @@ check-io-sh: compile $(TESTS_IO) $(TESTS_SH) $(PROGRAMS_DRIVERS)
 	done; \
 	test_summary 'Summary: PASS '
 
-BT_LDFLAGS := -Wl,--wrap=malloc,--wrap=free,--wrap=realloc
+BT_LDFLAGS := -Wl,--wrap=malloc,--wrap=free,--wrap=realloc,--wrap=calloc,--wrap=reallocarray
 
 $(TESTS_DIR)/%: $(TESTS_DIR)/%.c $(OBJECTS)
 	$(CC) $(CFLAGS) $(LDFLAGS) $(BT_LDFLAGS) $(TESTS_DIR)/$*.c $(OBJECTS) -o $@

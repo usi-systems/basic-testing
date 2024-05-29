@@ -10,11 +10,13 @@ struct array {
 };
 
 struct array * array_new(void);
+struct array * array_new_calloc(void);
 void array_free(struct array * array);
 void array_free_leak(struct array * array);
 size_t array_length(struct array * array);
 size_t array_capacity(struct array * array);
 int array_element(struct array * array, size_t index);
 int array_append(struct array * array, int value);
+int array_append_reallocarray(struct array * array, int value);
 
 #endif

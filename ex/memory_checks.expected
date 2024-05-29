@@ -64,3 +64,5 @@ Running test 06_scheduled_failures...                PASS
 Running test 06_scheduled_failures_cpp...            PASS
 Running test 06_scheduled_failures_debug...          PASS
 Running test 06_scheduled_failures_debug_cpp...      PASS
+Running test 07_overflows...                         PASS
+Running test 07_overflows_cpp...                     PASS

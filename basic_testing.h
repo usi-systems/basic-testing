@@ -307,6 +307,8 @@ extern "C" {
 extern void * __real_malloc(size_t);
 extern void __real_free(void *);
 extern void * __real_realloc(void *, size_t);
+extern void * __real_calloc(size_t, size_t);
+extern void * __real_reallocarray(void *, size_t, size_t);
 
 #ifdef __cplusplus
 }
@@ -461,7 +463,7 @@ static size_t bt_leaked_bytes(void) {
 #ifdef __cplusplus
 extern "C" {
 #endif
-    
+
 BT_POSSIBLY_UNUSED
 void *__wrap_malloc(size_t size) {
     if (size == 0) {
@@ -578,6 +580,22 @@ void *__wrap_realloc(void * ptr, size_t new_size) {
 
     return ret;
 }
+
+
+void * __wrap_calloc (size_t nmemb, size_t size) {
+    size_t len = nmemb * size;
+    if (len / size != nmemb) return NULL;
+    void * p = __wrap_malloc (len);
+    if (p) memset(p, 0, len);
+    return p;
+}
+
+void * __wrap_reallocarray (void * ptr, size_t nmemb, size_t size) {
+    size_t len = nmemb * size;
+    if (len / size != nmemb) return NULL;
+    return __wrap_realloc (ptr, len);
+}
+
 
 #ifdef __cplusplus
 }
