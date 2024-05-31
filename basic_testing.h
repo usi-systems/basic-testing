@@ -26,6 +26,7 @@
 #include <stdio.h>
 #include <stdint.h>
 #include <string.h>
+#include <limits.h>
 
 #ifdef __cplusplus
 #include <iostream>
@@ -251,54 +252,109 @@ static unsigned int bt_timeout = 3; /* three seconds */
 BT_POSSIBLY_UNUSED
 static int bt_verbose = 1;
 
-static size_t bt_malloc_failure_count = 0;
-static size_t bt_malloc_failure_size = 0;
+static size_t bt_mem_check_disabled = 0;
 
-static int bt_malloc_budget_enabled = 0;
-static size_t bt_malloc_budget = 0;
-static size_t bt_malloc_budget_curr = 0;
+static size_t bt_mem_failure_count = 0;
+static size_t bt_mem_failure_size = 0;
 
-static int bt_budget_bytes_enabled = 0;
+static int bt_mem_budget_enabled = 0;
+static size_t bt_mem_budget = 0;
+static size_t bt_mem_budget_curr = 0;
+
+static int bt_mem_bytes_budget_enabled = 0;
 static size_t bt_mem_bytes_budget = 0;
 static size_t bt_mem_bytes_budget_curr = 0;
 
+/* The main parameters of the BT Mem table are macros, in case we want
+   to change their values through compiler options.
+  */
+#ifndef BT_MEM_TABLE_MIN_SIZE
+#define BT_MEM_TABLE_MIN_SIZE 128
+#endif
+#ifndef BT_MEM_TABLE_REHASH_HIGH_RATIO
+/* By default, we double the size of the table when the size of the
+   table, meaning the number of elements actually stored in the table,
+   is more than 1/BT_MEM_TABLE_REHASH_HIGH_RATIO of the capacity of
+   the table.  So, by default, we grow the table when the occupancy is
+   more than half the capacity. */
+#define BT_MEM_TABLE_REHASH_HIGH_RATIO 2
+#endif
+#ifndef BT_MEM_TABLE_REHASH_LOW_RATIO
+/* By default, we cut the size of the table in half when the size of
+   the table, meaning the number of elements actually stored in the
+   table, is less than 1/BT_MEM_TABLE_REHASH_LOW_RATIO of the capacity
+   of the table.  So, by default, we shrink the table when the
+   occupancy is less than 1/8 of the capacity.  We never shrink below
+   BT_MEM_TABLE_MIN_SIZE */
+#define BT_MEM_TABLE_REHASH_LOW_RATIO 8
+#endif
 
+/* Schedule a one-time failure of any memory allocation functions as
+   soon as `count' invocation are made or `size' bytes are allocated
+   in total and not considering deallocations.  Notice that if you
+   want the next memory allocation function to fail, `count' must be
+   set to 1.  Setting `count' to 0 means ignoring the number of calls.
+   Similarly, setting `size' to 0 means ignoring the amount of
+   allocated memory.
+ */
 BT_POSSIBLY_UNUSED
-static void bt_malloc_schedule_failure (size_t count, size_t size) {
-    bt_malloc_failure_count = count;
-    bt_malloc_failure_size = size;
+static void bt_mem_schedule_failure (size_t count, size_t size) {
+    bt_mem_failure_count = count;
+    bt_mem_failure_size = size;
 }
 
+/* Cancel any previously scheduled one-time failure of memory
+   allocation functions.
+ */
 BT_POSSIBLY_UNUSED
-static void bt_malloc_cancel_failure () {
-    bt_malloc_failure_count = 0;
-    bt_malloc_failure_size = 0;
+static void bt_mem_cancel_failure () {
+    bt_mem_failure_count = 0;
+    bt_mem_failure_size = 0;
 }
 
-#define BT_FAIL_MEM_ALLOCATIONS do {		\
-	bt_malloc_budget_enabled = 1;		\
-	bt_malloc_budget = 0;		\
-	bt_malloc_budget_curr = 0;		\
-    } while(0)
+/* Cause all memory allocation functions to fail from now on.  This
+   has an immediate effect, meaning that the next allocation function
+   will fail.
+ */
+BT_POSSIBLY_UNUSED
+static void bt_mem_fail_all() {
+    bt_mem_budget_enabled = 1;
+    bt_mem_budget = 0;
+    bt_mem_budget_curr = 0;
+}
 
-#define BT_SET_MEM_ALLOCATION_BUDGET(BUDGET) do {	\
-	bt_malloc_budget_enabled = 1;			\
-	bt_malloc_budget = (BUDGET);		\
-	bt_malloc_budget_curr = (BUDGET);		\
-    } while(0)
+/* Set a maximum allocation budget in terms of number of invocations
+   of memory allocation functions.  As soon as this budget of calls is
+   exceeded, any allocation function will fail.  A call to `free' will
+   count as -1.
+ */
+void bt_mem_set_allocation_budget(size_t budget) {
+    bt_mem_budget_enabled = 1;
+    bt_mem_budget = budget;
+    bt_mem_budget_curr = budget;
+}
 
-#define BT_SET_MEM_BYTES_BUDGET(BUDGET) do {		\
-	bt_budget_bytes_enabled = 1;			\
-	bt_mem_bytes_budget = (BUDGET);			\
-	bt_mem_bytes_budget_curr = (BUDGET);		\
-    } while(0)
+/* Set a maximum allocation budget in terms of amount of memory.  As
+   soon as this budget is exceeded, any allocation function will fail.
+   Calling `free(p)' will discount the amount of memory previously
+   allocated with pointer `p'.
+ */
+void bt_mem_set_bytes_budget(size_t budget) {
+    bt_mem_bytes_budget_enabled = 1;
+    bt_mem_bytes_budget = budget;
+    bt_mem_bytes_budget_curr = budget;
+}
 
-#define BT_RESET_MEM_ALLOCATOR  do {			\
-	bt_budget_bytes_enabled = 0;			\
-	bt_malloc_budget_enabled = 0;			\
-	bt_malloc_cancel_failure ();			\
-    } while(0)
-
+/* Completely reset the instrumentation of the memory allocation
+   functions.  Failures are reset, and invocations and bytes
+   budgets are also canceled.
+ */
+void bt_mem_reset_allocator () {
+    bt_mem_check_disabled = 0;
+    bt_mem_bytes_budget_enabled = 0;
+    bt_mem_budget_enabled = 0;
+    bt_mem_cancel_failure ();
+}
 
 #ifdef __cplusplus
 extern "C" {
@@ -314,40 +370,44 @@ extern void * __real_reallocarray(void *, size_t, size_t);
 }
 #endif
 
-struct bt_hash_node {
+struct bt_mem_node {
     void * address;
     size_t size;
     int deleted;
 };
 
 BT_POSSIBLY_UNUSED
-static struct bt_hash_node * bt_memory_table = NULL;
-static size_t bt_memory_table_size = 0;
-static size_t bt_memory_table_capacity = 0;
+static struct bt_mem_node * bt_mem_table = NULL;
+static size_t bt_mem_table_size = 0;
+static size_t bt_mem_table_capacity = 0;
 
 BT_POSSIBLY_UNUSED
-static void bt_memory_table_free (void) {
-    if (bt_memory_table) __real_free (bt_memory_table);
-    bt_memory_table = NULL;
-    bt_memory_table_size = 0;
-    bt_memory_table_capacity = 0;
+static void bt_mem_table_free (void) {
+    if (bt_mem_table) __real_free (bt_mem_table);
+    bt_mem_table = NULL;
+    bt_mem_table_size = 0;
+    bt_mem_table_capacity = 0;
 }
 
-
-BT_POSSIBLY_UNUSED
-static struct bt_hash_node * bt_memory_table_find (void * address) {
-    if (bt_memory_table == NULL) return NULL;
-
+static size_t bt_ptr_hash(void * address) {
     uintptr_t h = (uintptr_t) address;
     h /= alignof(max_align_t);
-    h %= bt_memory_table_capacity;
+    h %= bt_mem_table_capacity;
     h |= 1;
-    uintptr_t g = h;
+    return h;
+}
 
-    struct bt_hash_node * node = bt_memory_table + h;
+BT_POSSIBLY_UNUSED
+static struct bt_mem_node * bt_mem_table_find (void * address) {
+    if (bt_mem_table == NULL) return NULL;
+
+    size_t h = bt_ptr_hash(address);
+    size_t g = h;
+
+    struct bt_mem_node * node = bt_mem_table + h;
     while ((node->address != address && node->address != NULL) || (node->address == NULL && node->deleted)) {
-	h = (h + g)%bt_memory_table_capacity;
-	node = bt_memory_table + h;
+	h = (h + g)%bt_mem_table_capacity;
+	node = bt_mem_table + h;
     }
     if (node->address != address) return NULL;
 
@@ -355,95 +415,82 @@ static struct bt_hash_node * bt_memory_table_find (void * address) {
 }
 
 BT_POSSIBLY_UNUSED
-static struct bt_hash_node * bt_memory_table_find_or_insert (void * address) {
-    if (bt_memory_table == NULL) return NULL;
+static struct bt_mem_node * bt_mem_table_find_or_insert (void * address) {
+    if (bt_mem_table == NULL) return NULL;
 
-    uintptr_t h = (uintptr_t) address;
-    h /= alignof(max_align_t);
-    h %= bt_memory_table_capacity;
-    h |= 1;
-    uintptr_t g = h;
+    size_t h = bt_ptr_hash(address);
+    size_t g = h;
 
-    struct bt_hash_node * node = bt_memory_table + h;
+    struct bt_mem_node * node = bt_mem_table + h;
     while (node->address != address && node->address != NULL) {
-	h = (h + g)%bt_memory_table_capacity;
-	node = bt_memory_table + h;
+	h = (h + g)%bt_mem_table_capacity;
+	node = bt_mem_table + h;
     }
 
     return node;
 }
 
+static int bt_mem_rehash (size_t new_cap) {
+    struct bt_mem_node * new_table =
+	(struct bt_mem_node *) __real_malloc(new_cap*sizeof(struct bt_mem_node));
+    if (!new_table) return 0;
+
+    memset(new_table, 0, new_cap*sizeof(struct bt_mem_node));
+    struct bt_mem_node * tmp = bt_mem_table;
+    size_t old_cap = bt_mem_table_capacity;
+
+    bt_mem_table = new_table;
+    bt_mem_table_capacity = new_cap;
+    bt_mem_table_size = 0;
+
+    for (size_t i = 0; i < old_cap; ++i) {
+	if (tmp[i].address) {
+	    struct bt_mem_node * node = bt_mem_table_find_or_insert(tmp[i].address);
+	    node->address = tmp[i].address;
+	    node->size = tmp[i].size;
+	}
+    }
+    if (tmp) __real_free(tmp);
+    return 1;
+}
 
 BT_POSSIBLY_UNUSED
-static int bt_memory_table_set (void *address, size_t size) {
-    struct bt_hash_node * node = bt_memory_table_find_or_insert (address);
+static int bt_mem_table_set (void *address, size_t size) {
+    struct bt_mem_node * node = bt_mem_table_find_or_insert (address);
 
     if (node && node->address != NULL) {
 	node->size = size;
 	return 1;
     }
 
-    if (bt_memory_table_size*2 == bt_memory_table_capacity) {
-	size_t new_cap = bt_memory_table_capacity ? 2*bt_memory_table_capacity : 128;
-
-	struct bt_hash_node * new_table =
-	    (struct bt_hash_node *) __real_malloc(new_cap*sizeof(struct bt_hash_node));
-	if (!new_table) return 0;
-
-	memset(new_table, 0, new_cap*sizeof(struct bt_hash_node));
-	struct bt_hash_node * tmp = bt_memory_table;
-	size_t old_cap = bt_memory_table_capacity;
-
-	bt_memory_table = new_table;
-	bt_memory_table_capacity = new_cap;
-	bt_memory_table_size = 0;
-
-	for (size_t i = 0; i < old_cap; ++i)
-	    if (tmp[i].address)
-		bt_memory_table_set (tmp[i].address, tmp[i].size);
-
-	if (tmp) __real_free(tmp);
-	node = bt_memory_table_find_or_insert (address);
+    if (bt_mem_table_size*BT_MEM_TABLE_REHASH_HIGH_RATIO >= bt_mem_table_capacity) {
+	size_t new_cap = bt_mem_table_capacity ? 2*bt_mem_table_capacity : BT_MEM_TABLE_MIN_SIZE;
+	if (!bt_mem_rehash(new_cap))
+	    return 0;
+	node = bt_mem_table_find_or_insert (address);
     }
 
     node->address = address;
     node->size = size;
     node->deleted = 0;
-    ++bt_memory_table_size;
+    ++bt_mem_table_size;
 
     return 1;
 }
 
 BT_POSSIBLY_UNUSED
-static int bt_memory_table_remove (void * address) {
-    struct bt_hash_node * node = bt_memory_table_find (address);
+static int bt_mem_table_remove (void * address) {
+    struct bt_mem_node * node = bt_mem_table_find (address);
     if (!node) return 0;
 
     node->address = NULL;
     node->deleted = 1;
-    --bt_memory_table_size;
+    --bt_mem_table_size;
 
-    if (bt_memory_table_capacity > 128 && bt_memory_table_size*8 < bt_memory_table_capacity) {
-	size_t new_cap = bt_memory_table_capacity / 8;
-
-	struct bt_hash_node * new_table =
-	    (struct bt_hash_node *) __real_malloc(new_cap*sizeof(struct bt_hash_node));
-	if (!new_table) return 0;
-
-	memset(new_table, 0, new_cap*sizeof(struct bt_hash_node));
-	struct bt_hash_node * tmp = bt_memory_table;
-	size_t old_cap = bt_memory_table_capacity;
-
-	bt_memory_table = new_table;
-	bt_memory_table_capacity = new_cap;
-	bt_memory_table_size = 0;
-
-	for (size_t i = 0; i < old_cap; ++i)
-	    if (tmp[i].address)
-		bt_memory_table_set (tmp[i].address, tmp[i].size);
-
-	__real_free(tmp);
-    }
+    if (bt_mem_table_capacity > BT_MEM_TABLE_MIN_SIZE
+	&& bt_mem_table_size*BT_MEM_TABLE_REHASH_LOW_RATIO < bt_mem_table_capacity)
+	if (!bt_mem_rehash(bt_mem_table_capacity / 2))
+	    return 0;
 
     return 1;
 }
@@ -452,9 +499,9 @@ BT_POSSIBLY_UNUSED
 static size_t bt_leaked_bytes(void) {
     size_t size = 0;
 
-    for (size_t i = 0; i < bt_memory_table_capacity; ++i)
-	if (bt_memory_table[i].address)
-	    size += bt_memory_table[i].size;
+    for (size_t i = 0; i < bt_mem_table_capacity; ++i)
+	if (bt_mem_table[i].address)
+	    size += bt_mem_table[i].size;
 
     return size;
 }
@@ -467,135 +514,138 @@ extern "C" {
 BT_POSSIBLY_UNUSED
 void *__wrap_malloc(size_t size) {
     if (size == 0) {
-	puts("\nmalloc with size 0 is not portable");
+	fputs("\nmalloc with size 0 is not portable", stderr);
 	if (bt_fork_tests) exit(BT_FAILURE);
 	else abort();
     }
-    if (bt_malloc_failure_count > 0) {
-	if (--bt_malloc_failure_count == 0) {
-	    bt_malloc_failure_size = 0;
+    if (bt_mem_failure_count > 0) {
+	if (--bt_mem_failure_count == 0) {
+	    bt_mem_failure_size = 0;
 	    return 0;
 	}
     }
-    if (bt_malloc_failure_size > 0) {
-	if (size < bt_malloc_failure_size) {
-	    bt_malloc_failure_size -= size;
+    if (bt_mem_failure_size > 0) {
+	if (size < bt_mem_failure_size) {
+	    bt_mem_failure_size -= size;
 	} else {
-	    bt_malloc_failure_count = 0;
-	    bt_malloc_failure_size = 0;
+	    bt_mem_failure_count = 0;
+	    bt_mem_failure_size = 0;
 	    return 0;
 	}
     }
-    if (bt_malloc_budget_enabled && bt_malloc_budget_curr == 0)
+    if (bt_mem_budget_enabled && bt_mem_budget_curr == 0)
 	return NULL;
-    else if (bt_budget_bytes_enabled && bt_mem_bytes_budget_curr < size)
+    else if (bt_mem_bytes_budget_enabled && bt_mem_bytes_budget_curr < size)
 	return NULL;
 
     void * ret = __real_malloc(size);
     if (!ret) return NULL;
 
-    if (bt_malloc_budget_enabled)
-	--bt_malloc_budget_curr;
-    else if (bt_budget_bytes_enabled)
+    if (bt_mem_budget_enabled)
+	--bt_mem_budget_curr;
+    else if (bt_mem_bytes_budget_enabled)
 	bt_mem_bytes_budget_curr -= size;
 
-    if (!bt_memory_table_set(ret, size))
-	abort();
+    if (!bt_mem_table_set(ret, size)) {
+	bt_mem_check_disabled = 1;
+    }
 
     return ret;
 }
 
 BT_POSSIBLY_UNUSED
 void __wrap_free(void * ptr) {
-    const struct bt_hash_node *p = bt_memory_table_find(ptr);
+    const struct bt_mem_node *p = bt_mem_table_find(ptr);
     if (!p) {
-	puts("\nmemory was not allocated via malloc, or possible double free");
+	fputs("\nmemory was not allocated via malloc, or possible double free", stderr);
 	if (bt_fork_tests) exit(BT_FAILURE);
 	else abort();
     }
 
-    if (bt_malloc_budget_enabled && ++bt_malloc_budget_curr > bt_malloc_budget)
-	bt_malloc_budget_curr = bt_malloc_budget;
-    else if (bt_budget_bytes_enabled) {
+    if (bt_mem_budget_enabled && ++bt_mem_budget_curr > bt_mem_budget)
+	bt_mem_budget_curr = bt_mem_budget;
+    else if (bt_mem_bytes_budget_enabled) {
 	bt_mem_bytes_budget_curr += p->size;
 	if (bt_mem_bytes_budget_curr > bt_mem_bytes_budget)
 	    bt_mem_bytes_budget_curr = bt_mem_bytes_budget;
     }
 
-    bt_memory_table_remove(ptr);
+    bt_mem_table_remove(ptr);
     __real_free(ptr);
 }
 
 BT_POSSIBLY_UNUSED
 void *__wrap_realloc(void * ptr, size_t new_size) {
     if (new_size == 0) {
-	puts("\nrealloc with size 0 is not portable");
+	fputs("\nrealloc with size 0 is not portable", stderr);
 	if (bt_fork_tests) exit(BT_FAILURE);
 	else abort();
     }
     if (!ptr) return __wrap_malloc(new_size);
 
-    if (bt_malloc_failure_count > 0) {
-	if (--bt_malloc_failure_count == 0) {
-	    bt_malloc_failure_size = 0;
+    if (bt_mem_failure_count > 0) {
+	if (--bt_mem_failure_count == 0) {
+	    bt_mem_failure_size = 0;
 	    return 0;
 	}
     }
-    if (bt_malloc_failure_size > 0) {
-	if (new_size < bt_malloc_failure_size) {
-	    bt_malloc_failure_size -= new_size;
+    if (bt_mem_failure_size > 0) {
+	if (new_size < bt_mem_failure_size) {
+	    bt_mem_failure_size -= new_size;
 	} else {
-	    bt_malloc_failure_count = 0;
-	    bt_malloc_failure_size = 0;
+	    bt_mem_failure_count = 0;
+	    bt_mem_failure_size = 0;
 	    return 0;
 	}
     }
 
-    if (bt_malloc_budget_enabled && bt_malloc_budget_curr == 0)
+    if (bt_mem_budget_enabled && bt_mem_budget_curr == 0)
 	return NULL;
 
-    const struct bt_hash_node * node = bt_memory_table_find(ptr);
+    const struct bt_mem_node * node = bt_mem_table_find(ptr);
     if (!node) {
-	puts("\nrealloc of not heap allocated memory");
+	fputs("\nrealloc of not heap allocated memory", stderr);
 	if (bt_fork_tests) exit(BT_FAILURE);
 	else abort();
-    } else if (bt_budget_bytes_enabled && bt_mem_bytes_budget_curr + node->size < new_size)
+    } else if (bt_mem_bytes_budget_enabled && bt_mem_bytes_budget_curr + node->size < new_size)
 	return NULL;
 
     void * ret = __real_realloc(ptr, new_size);
     if (!ret) return NULL;
 
-    if (bt_malloc_budget_enabled)
-	--bt_malloc_budget_curr;
-    else if (bt_budget_bytes_enabled) {
+    if (bt_mem_budget_enabled)
+	--bt_mem_budget_curr;
+    else if (bt_mem_bytes_budget_enabled) {
 	bt_mem_bytes_budget_curr += node->size;
 	bt_mem_bytes_budget_curr -= new_size;
     }
 
-    if (!bt_memory_table_set(ret, new_size))
-	abort();
+    if (!bt_mem_table_set(ret, new_size)) {
+	bt_mem_check_disabled = 1;
+    }
 
     if (ret != ptr)
-	bt_memory_table_remove(ptr);
+	bt_mem_table_remove(ptr);
 
     return ret;
 }
 
 
 void * __wrap_calloc (size_t nmemb, size_t size) {
+    if (nmemb == 0 || size == 0 || SIZE_MAX / nmemb <= size)
+	return NULL;
     size_t len = nmemb * size;
-    if (len / size != nmemb) return NULL;
     void * p = __wrap_malloc (len);
     if (p) memset(p, 0, len);
     return p;
 }
 
 void * __wrap_reallocarray (void * ptr, size_t nmemb, size_t size) {
+    if (nmemb == 0 || size == 0 || SIZE_MAX / nmemb <= size)
+	return NULL;
     size_t len = nmemb * size;
-    if (len / size != nmemb) return NULL;
     return __wrap_realloc (ptr, len);
 }
-
 
 #ifdef __cplusplus
 }
@@ -647,17 +697,18 @@ static int bt_run_test(const struct bt_test_descriptor * t) {
 	int result = t->test_function();
 	if (result == BT_FAILURE) return result;
 
-	size_t leak = bt_leaked_bytes();
-
-	if (leak != 0) {
-	    printf("\nLeaked %zu bytes in %s\n", leak, t->name);
-	    BT_RESET_MEM_ALLOCATOR;
-	    bt_memory_table_free();
-	    TEST_FAILED;
+	if (bt_mem_check_disabled) {
+	    printf("\nWARNING: Leakage test is disabled in %s\n", t->name);
+	    result = BT_FAILURE;
+	} else {
+	    size_t leak = bt_leaked_bytes();
+	    if (leak != 0) {
+		printf("\nLeaked %zu bytes in %s\n", leak, t->name);
+		result = BT_FAILURE;
+	    }
 	}
-
-	BT_RESET_MEM_ALLOCATOR;
-	bt_memory_table_free();
+	bt_mem_reset_allocator();
+	bt_mem_table_free();
 	return result;
     }
     pid_t pid;
@@ -681,13 +732,17 @@ static int bt_run_test(const struct bt_test_descriptor * t) {
 	int result = t->test_function();
 	if (result == BT_FAILURE) exit(result);
 
-	size_t leak = bt_leaked_bytes();
-
-	if (leak != 0) {
-	    printf("\nLeaked %zu bytes in %s\n", leak, t->name);
+	if (bt_mem_check_disabled) {
+	    printf("\nWARNING: Leakage test is disabled in %s\n", t->name);
 	    result = BT_FAILURE;
+	} else {
+	    size_t leak = bt_leaked_bytes();
+	    if (leak != 0) {
+		printf("\nLeaked %zu bytes in %s\n", leak, t->name);
+		result = BT_FAILURE;
+	    }
 	}
-	bt_memory_table_free();
+	bt_mem_table_free();
 	exit(result);
     } else {
 	/* Parent: Wait until child terminates and analyze its exit code. */
