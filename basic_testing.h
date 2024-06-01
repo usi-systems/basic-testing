@@ -307,7 +307,7 @@ static void bt_mem_schedule_failure (size_t count, size_t size) {
    allocation functions.
  */
 BT_POSSIBLY_UNUSED
-static void bt_mem_cancel_failure () {
+static void bt_mem_cancel_failure (void) {
     bt_mem_failure_count = 0;
     bt_mem_failure_size = 0;
 }
@@ -317,7 +317,7 @@ static void bt_mem_cancel_failure () {
    will fail.
  */
 BT_POSSIBLY_UNUSED
-static void bt_mem_fail_all() {
+static void bt_mem_fail_all (void) {
     bt_mem_budget_enabled = 1;
     bt_mem_budget = 0;
     bt_mem_budget_curr = 0;
@@ -328,7 +328,7 @@ static void bt_mem_fail_all() {
    exceeded, any allocation function will fail.  A call to `free' will
    count as -1.
  */
-void bt_mem_set_allocation_budget(size_t budget) {
+void bt_mem_set_allocation_budget (size_t budget) {
     bt_mem_budget_enabled = 1;
     bt_mem_budget = budget;
     bt_mem_budget_curr = budget;
@@ -339,7 +339,7 @@ void bt_mem_set_allocation_budget(size_t budget) {
    Calling `free(p)' will discount the amount of memory previously
    allocated with pointer `p'.
  */
-void bt_mem_set_bytes_budget(size_t budget) {
+void bt_mem_set_bytes_budget (size_t budget) {
     bt_mem_bytes_budget_enabled = 1;
     bt_mem_bytes_budget = budget;
     bt_mem_bytes_budget_curr = budget;
@@ -349,7 +349,7 @@ void bt_mem_set_bytes_budget(size_t budget) {
    functions.  Failures are reset, and invocations and bytes
    budgets are also canceled.
  */
-void bt_mem_reset_allocator () {
+void bt_mem_reset_allocator (void) {
     bt_mem_check_disabled = 0;
     bt_mem_bytes_budget_enabled = 0;
     bt_mem_budget_enabled = 0;
@@ -360,11 +360,11 @@ void bt_mem_reset_allocator () {
 extern "C" {
 #endif
 
-extern void * __real_malloc(size_t);
-extern void __real_free(void *);
-extern void * __real_realloc(void *, size_t);
-extern void * __real_calloc(size_t, size_t);
-extern void * __real_reallocarray(void *, size_t, size_t);
+extern void * __real_malloc (size_t);
+extern void __real_free (void *);
+extern void * __real_realloc (void *, size_t);
+extern void * __real_calloc (size_t, size_t);
+extern void * __real_reallocarray (void *, size_t, size_t);
 
 #ifdef __cplusplus
 }
@@ -389,7 +389,7 @@ static void bt_mem_table_free (void) {
     bt_mem_table_capacity = 0;
 }
 
-static size_t bt_ptr_hash(void * address) {
+static size_t bt_ptr_hash (void * address) {
     uintptr_t h = (uintptr_t) address;
     h /= alignof(max_align_t);
     h %= bt_mem_table_capacity;
@@ -441,7 +441,6 @@ static int bt_mem_rehash (size_t new_cap) {
 
     bt_mem_table = new_table;
     bt_mem_table_capacity = new_cap;
-    bt_mem_table_size = 0;
 
     for (size_t i = 0; i < old_cap; ++i) {
 	if (tmp[i].address) {
@@ -496,7 +495,7 @@ static int bt_mem_table_remove (void * address) {
 }
 
 BT_POSSIBLY_UNUSED
-static size_t bt_leaked_bytes(void) {
+static size_t bt_leaked_bytes (void) {
     size_t size = 0;
 
     for (size_t i = 0; i < bt_mem_table_capacity; ++i)
@@ -512,9 +511,9 @@ extern "C" {
 #endif
 
 BT_POSSIBLY_UNUSED
-void *__wrap_malloc(size_t size) {
+void *__wrap_malloc (size_t size) {
     if (size == 0) {
-	fputs("\nmalloc with size 0 is not portable", stderr);
+	fputs("\nmalloc with size 0 is not portable\n", stderr);
 	if (bt_fork_tests) exit(BT_FAILURE);
 	else abort();
     }
@@ -554,10 +553,10 @@ void *__wrap_malloc(size_t size) {
 }
 
 BT_POSSIBLY_UNUSED
-void __wrap_free(void * ptr) {
+void __wrap_free (void * ptr) {
     const struct bt_mem_node *p = bt_mem_table_find(ptr);
     if (!p) {
-	fputs("\nmemory was not allocated via malloc, or possible double free", stderr);
+	fputs("\nmemory was not allocated via malloc, or possible double free\n", stderr);
 	if (bt_fork_tests) exit(BT_FAILURE);
 	else abort();
     }
@@ -575,9 +574,9 @@ void __wrap_free(void * ptr) {
 }
 
 BT_POSSIBLY_UNUSED
-void *__wrap_realloc(void * ptr, size_t new_size) {
+void *__wrap_realloc (void * ptr, size_t new_size) {
     if (new_size == 0) {
-	fputs("\nrealloc with size 0 is not portable", stderr);
+	fputs("\nrealloc with size 0 is not portable\n", stderr);
 	if (bt_fork_tests) exit(BT_FAILURE);
 	else abort();
     }
@@ -604,7 +603,7 @@ void *__wrap_realloc(void * ptr, size_t new_size) {
 
     const struct bt_mem_node * node = bt_mem_table_find(ptr);
     if (!node) {
-	fputs("\nrealloc of not heap allocated memory", stderr);
+	fputs("\nrealloc of not heap allocated memory\n", stderr);
 	if (bt_fork_tests) exit(BT_FAILURE);
 	else abort();
     } else if (bt_mem_bytes_budget_enabled && bt_mem_bytes_budget_curr + node->size < new_size)

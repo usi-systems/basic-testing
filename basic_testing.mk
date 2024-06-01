@@ -158,7 +158,6 @@ check-io-sh: compile $(TESTS_IO) $(TESTS_SH) $(PROGRAMS_DRIVERS)
 		$(SCRIPT_CHECK_ERR_FILE); \
 	done; \
 	for t in $(TESTS_SH_NAMES); do \
-		echo "$$t" ; \
 		test_start "$$t"; \
 		$(SHELL) "$(TESTS_DIR)/$$t.sh" "$(PROGRAMS_CWD)/$$p"  $(SCRIPT_HANDLE_OUT_ERR_TEST) &\
 		$(SCRIPT_GET_TEST_RESULT); \
@@ -203,7 +202,7 @@ check-bin: $(TESTS_BIN)
 			echo ;\
 			valgrind $(VALGRIND_FLAGS) "$(TESTS_DIR)/$$t" 2>&1 &\
 		else \
-			"$(TESTS_DIR)/$$t" -q &\
+			"$(TESTS_DIR)/$$t" -q 2>&1 &\
 		fi; \
 		$(SCRIPT_GET_TEST_RESULT); \
 		if test $$res = KO; then \
