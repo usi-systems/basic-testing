@@ -12,7 +12,7 @@ all-examples:
 	do test_result=PASS; \
 	   cp -a basic_testing.h "$$ex"/tests ;\
 	   $(MAKE) -C "$$ex" clean > /dev/null || test_result=FAIL; \
-	   $(MAKE) -C "$$ex" TEST_COLORS=no > "$$ex".out || test_result=FAIL ; \
+	   $(MAKE) -C "$$ex" TEST_COLORS=no > "$$ex".out 2>&1 || test_result=FAIL ; \
 	   if test -r "$$ex".expected; \
 	   	then { IFS=''; while read l; \
 	   	        do if grep -Fq "$$l" "$$ex".out; \
