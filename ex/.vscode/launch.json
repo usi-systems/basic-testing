@@ -1,0 +1,80 @@
+{
+    // Use IntelliSense to learn about possible attributes.
+    // Hover to view descriptions of existing attributes.
+    // For more information, visit: https://go.microsoft.com/fwlink/?linkid=830387
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "name": "debug library test (gdb/lldb)",
+            // Requires C/C++ extension from Microsoft
+            "type": "cppdbg",
+            "request": "launch",
+            "cwd": "${fileDirname}",
+            "preLaunchTask": "Build single test",
+            "program": "${fileDirname}/${fileBasenameNoExtension}",
+            "args": ["-d"],
+            // Requires C/C++ extension from Microsoft
+            "MIMode": "${input:debugger}",
+            "setupCommands": [
+                {
+                    "description": "Enable pretty-printing for gdb",
+                    "text": "-enable-pretty-printing",
+                    "ignoreFailures": true
+                },
+                {
+                    "description": "Set Disassembly Flavor to Intel",
+                    "text": "-gdb-set disassembly-flavor intel",
+                    "ignoreFailures": true
+                }
+            ],
+        },
+        {
+            "name": "debug binary IO (gdb/lldb)",
+            // Requires C/C++ extension from Microsoft
+            "type": "cppdbg",
+            "request": "launch",
+            "cwd": "${fileDirname}",
+            "preLaunchTask": "Build and run tests",
+            "program": "${fileDirname}/${fileBasenameNoExtension}",
+            "args": ["-d", "<", "tests/${input:test}"],
+            // Requires C/C++ extension from Microsoft
+            "MIMode": "${input:debugger}",
+            "setupCommands": [
+                {
+                    "description": "Enable pretty-printing for gdb",
+                    "text": "-enable-pretty-printing",
+                    "ignoreFailures": true
+                },
+                {
+                    "description": "Set Disassembly Flavor to Intel",
+                    "text": "-gdb-set disassembly-flavor intel",
+                    "ignoreFailures": true
+                }
+            ],
+        },
+    ],
+    "inputs": [
+        {
+          "type": "pickString",
+          "id": "debugger",
+          "description": "Which debugger do you want to use?",
+          "options": [
+            "gdb",
+            "lldb",
+          ],
+          "default": "gdb"
+        },
+        {
+            "type": "pickString",
+            "id": "test",
+            "description": "Pick the input file to pass to the program",
+            // TODO: make it so it's generated at runtime, or on test generation!
+            "options": [
+              "test0.in",
+              "test1.in",
+              "test2.in",
+            ],
+            "default": "gdb"
+          },
+    ],
+}

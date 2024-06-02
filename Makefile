@@ -2,7 +2,7 @@
 all: all-examples
 
 EXAMPLES = ex/example1 ex/example2 ex/example3 ex/example4 \
-	ex/example5 ex/example6 ex/example7 ex/example8 \
+	ex/example5 ex/example6 ex/example7 ex/example8 ex/example11 ex/main-wrap \
 	'ex ws/example1 ws' 'ex ws/example2 ws' 'ex ws/example3 ws' 'ex ws/example4 ws' \
 	'ex ws/example5 ws' 'ex ws/example6 ws' 'ex ws/example7 ws' 'ex ws/example8 ws'
 

@@ -511,4 +511,26 @@ int bt_test_driver(int argc, char * argv[]) {
     }
 #endif
 
+// IO tests macros
+#define FILENAME(ext) \
+   char ext##_filename[128] = {0}; \
+   strncat(ext##_filename, __FILE__, strlen(__FILE__)-1); \
+   strcat(ext##_filename, #ext)
+
+#define RUN_PROGRAM(...)             \
+    extern int __real_main(int, char*[]);   \
+    int __wrap_main() {                     \
+        FILENAME(in);                       \
+        FILENAME(out);                      \
+        FILENAME(expected);                 \
+        BT_POSSIBLY_UNUSED FILE* in_file = freopen(in_filename, "r", stdin);    \
+        BT_POSSIBLY_UNUSED FILE* out_file = freopen(out_filename, "w", stdout); \
+        int result = __real_main(2, (char*[]) { __VA_ARGS__ });  \
+        if (in_file != NULL) fclose(in_file);    \
+        fclose(out_file);   \
+		if (result != 0) {	\
+			fprintf(stderr, "Implementation exited with value: %d", result);} \
+        return result;      	\
+    }
+
 #endif /* BASIC_TESTING_H_INCLUDED */

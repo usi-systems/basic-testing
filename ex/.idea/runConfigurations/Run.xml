@@ -1,0 +1,7 @@
+<component name="ProjectRunConfigurationManager">
+  <configuration default="false" name="Run" type="CLionNativeAppRunConfigurationType" focusToolWindowBeforeRun="true" REDIRECT_INPUT="false" ELEVATE="false" USE_EXTERNAL_CONSOLE="false" EMULATE_TERMINAL="true" WORKING_DIR="file://$ProjectFileDir$" PASS_PARENT_ENVS_2="true" PROJECT_NAME="example6" TARGET_NAME="Build all" CONFIG_NAME="Build all" version="1">
+    <method v="2">
+      <option name="ToolBeforeRunTask" enabled="true" actionId="Tool_Basic Testing_Run " />
+    </method>
+  </configuration>
+</component>

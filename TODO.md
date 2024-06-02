@@ -1,0 +1,148 @@
+# Todo (nick)
+
+- [x] Look if possible to invoke task from launch.json, and shows in button.
+- > conclusion: Not possible to add button, or custom "Run" task: possible to just run it 
+- [x] Determine if file is implementation or test (in tests directory)
+- [x] CLion debugging
+
+## 19.04
+
+- [/] investigate files appearing when running run configurations
+- [/] analyze problem of shell scripts (when/where interpreter is chosen)
+- [/] look workings with shell/IO tests
+
+- If time, generate automatically tests
+  - ~ CLI to generate folder and file structure
+  - lookup Unity C
+
+-> Ideas: m4 to fill up boilerplate
+  ```m4
+  include(bt.m4)      // implicit
+
+  Suite(name)         // sets current suite/file to generate
+  Test_compile()
+  Test_alloc_ok(type) // type is the type declaration
+  
+  ```
+-> Nope
+
+## 26.04
+
+- [ ] look workings with shell/IO tests
+  - Run can just run everything
+  - Debug has to make choiches, so better to have a debug target handling it?:
+    - make debug file.ext
+    - > if ext == c; then compile, cp to debugme, and run it (ez, done);
+      > if ext == in | expected; then needs some input redirection (hard);
+      > if ext == sh; then needs to run the program as in the shell script?? (Hardest);
+- [x] investigate files appearing when running run configurations
+  - ? touch only with `if [[ -f ... ]]; then touch ... fi;`?
+  - touch $fileName$ can create file in projectDir directory;
+  -> TODO: should all be from same dir as makefile, instead of projectDir?
+- [ ] analyze problem of shell scripts (when/where interpreter is chosen)
+- [x] VScode not showning tasks anymore (ex/example11)
+  -> .vscode or .idea folder must be in root of the project 
+
+## 10.05
+
+- Will there ever be test sets with more than one of IO / sh / c-cxx? 
+  - (y/n): (__**Kinda, shell could also be IO, but all confined in .sh file**__)
+  - Specific run configuration file for each type of set?
+  - makefile to make all decisions, based on `TESTS_(IO|SH|C|CXX)` variables?
+
+- Types
+  - Shell: Used to test/run binary implementation with specific arguments (e.g cli), (!?!)or other uses?
+  - I/O: Used to test/run binary implementation, with specific stdin, and expected output
+  - c/cpp src files: Used to test library implementations
+
+- Debugging problems:
+  - Library: None, just copy the test
+  - Binary programs: 
+    - how to select the correct compiled binary, to copy into a file named `debugme`?
+      - Need to open src file anyway?
+      - Makefile script to choose when project is library, or test suite, so which compiled binary to copy. 
+    - usually I/O or shell, so see below problems
+  - Shell: 
+    - how to get the arguments present in the shell script, to pass to the binary?
+  - I/O: choose which .in file to run
+    - Manual prompt?
+
+
+- Proposal:
+  - Common `Run all` configuration
+    - CLion: Run configuration (Button)
+    - VScode: Run task, instructions needed for keyboard shortcut
+      - <kbd>Ctrl</kbd> + <kbd>Shift</kbd> + <kbd>B</kbd>
+  - Specific debug configuration, for each test suite type (either)
+    - Library: currently open `test.c` or `test.cc` file
+    - IO: prompt to pickup file for stdin redirect
+      - Clion: either file, or name prompt
+      - VScode: can be configurable/generetable, by adding a specific field at the end of the file
+
+### TODO
+
+- [ ] Stabilize current solution
+  - Check which files are necessary to make everything work
+  - check that current stuff works
+- [ ] explore debugging for sh files
+- [x] complete section 1 of report, start section 2
+
+## 17.05
+
+- Linker: wrap (dll-library to substitute symbols)
+  - anche per test IO
+    - studente crea un main
+    - altro programma con "vero" main, va a chiamare main altro!
+    - linker:`--wrap = main`
+    - Take every undefined reference to symbol, and transform in symbol `__wrap_symbol_`
+    - => define wrapper 
+  - IO: intercept stodut of program: more difficult
+  - New version: capture IO functions (mostly O), for pinpoint comparison!
+  From LD manual:
+```txt --wrap=symbol
+Use a wrapper function for symbol.  Any undefined reference to
+symbol will be resolved to "__wrap_symbol".  Any undefined
+reference to "__real_symbol" will be resolved to symbol.
+
+This can be used to provide a wrapper for a system function.  The
+wrapper function should be called "__wrap_symbol".  If it wishes to
+call the system function, it should call "__real_symbol".
+
+Here is a trivial example:
+
+  void *
+  __wrap_malloc (size_t c)
+  {
+    printf ("malloc called with %zu\n", c);
+    return __real_malloc (c);
+  }
+
+If you link other code with this file using --wrap malloc, then all
+calls to "malloc" will call the function "__wrap_malloc" instead.
+The call to "__real_malloc" in "__wrap_malloc" will call the real
+"malloc" function.
+
+You may wish to provide a "__real_malloc" function as well, so that
+links without the --wrap option will succeed.  If you do this, you
+should not put the definition of "__real_malloc" in the same file
+as "__wrap_malloc"; if you do, the assembler may resolve the call
+before the linker has a chance to wrap it to "malloc".
+
+Only undefined references are replaced by the linker.  So,
+translation unit internal references to symbol are not resolved to
+"__wrap_symbol".  In the next example, the call to "f" in "g" is
+not resolved to "__wrap_f".
+
+  int
+  f (void)
+  {
+    return 123;
+  }
+
+  int
+  g (void)
+  {
+    return f();
+  }
+```
+Order of compilation may matter.

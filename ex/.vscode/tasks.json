@@ -1,0 +1,70 @@
+
+{
+"version": "2.0.0",
+"tasks": [
+    {
+        "label": "Build and run tests",
+        "detail": "Runs all tests, or a single test when opened in the editor",
+        "type": "shell",
+        "presentation": {
+            "reveal": "always"
+        },
+        "options": {
+            "cwd": "${fileDirname}/",
+        },
+        "command": " if [[ ${fileDirnameBasename} == tests ]]; then touch ${file}; cd .. && make check-single-bin BIN_NAME=tests/${fileBasenameNoExtension}; else touch ${file}; make; fi",
+        "problemMatcher": ["$gcc",
+            {
+                "owner": "make",
+                "fileLocation":[
+                    "relative",
+                    "${fileDirname}/tests/"
+                ],
+                "pattern":
+                {
+                // Matches "Running test test_name...                              FAIL"
+                "regexp": "^Running test\\s(.+)\\.\\.\\.\\s+FAIL$",
+                "file": 1,
+                "message": 1,
+                "kind": "file"
+                },
+            }
+        ],
+        "group": {
+            "kind": "build",
+            "isDefault": true
+        }
+    },
+    {
+        "label": "Build single test",
+        "detail": "Builds and runs a single test (open file in editor)",
+        "type": "shell",
+        "presentation": {
+            "reveal": "always",
+            "focus": true
+        },
+        "options": {
+            "cwd": "${fileDirname}/..",
+        },
+        "command": "make check-single-bin BIN_NAME=tests/${fileBasenameNoExtension}",
+        "problemMatcher": ["$gcc",
+            {
+                "owner": "make",
+                "fileLocation":[
+                    "relative",
+                    "${fileDirname}/tests/"
+                ],
+                "pattern":
+                {
+                // Matches "Running test test_name...                              FAIL"
+                "regexp": "^Running test\\s(.+)\\.\\.\\.\\s+FAIL$",
+                "file": 1,
+                "message": 1,
+                "kind": "file"
+                },
+            }
+        ]
+    }
+    
+]
+}
