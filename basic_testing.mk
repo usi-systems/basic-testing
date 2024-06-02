@@ -21,6 +21,8 @@ TESTS_BIN:=$(patsubst $(TESTS_DIR)/%.c, $(TESTS_DIR)/%, $(TESTS_C)) \
 	   $(patsubst $(TESTS_DIR)/%.cc, $(TESTS_DIR)/%, $(TESTS_CXX))
 TESTS_BIN_NAMES:=$(sort $(patsubst $(TESTS_DIR)/%.c, %, $(TESTS_C)) $(patsubst $(TESTS_DIR)/%.cc, %, $(TESTS_CXX)))
 
+TESTS_HYBRID:=$(wildcard $(TESTS_DIR)/*.expected)
+
 .PHONY: all
 all: compile check
 
@@ -176,7 +178,7 @@ check-io-sh: compile $(TESTS_IO) $(TESTS_SH) $(PROGRAMS_DRIVERS)
 			else \
 				test_ko FAIL ;\
 				test_diag "see $(TESTS_DIR)/$$t.sh" ;\
-				test_diag "run diff $$t.out $(TESTS_DIR)/$$t.expected";\
+				test_diag "run diff -c $$t.out $(TESTS_DIR)/$$t.expected";\
 				test_diag "to see the difference between the actual and expected output";\
 			fi; \
 		fi; \
@@ -204,11 +206,17 @@ check-bin: $(TESTS_BIN)
 			"$(TESTS_DIR)/$$t" -q &\
 		fi; \
 		$(SCRIPT_GET_TEST_RESULT); \
-		if test $$res = KO; then \
-			test_diag "run '$(TESTS_DIR)/$$t' to see what went wrong" ; \
+		if test $$res = KO || test "$(TESTS_HYBRID)" != "" && ! cmp -s "$(TESTS_DIR)/$$t.out" "$(TESTS_DIR)/$$t.expected"; then \
+			if test "$(TESTS_HYBRID)" != ""; then \
+				test_ko FAIL ; \
+				test_diag "run 'diff -c $(TESTS_DIR)/$$t.out $(TESTS_DIR)/$$t.expected' to see the mistakes"; \
+			else \
+				test_diag "run '$(TESTS_DIR)/$$t' to see what went wrong"; \
+			fi; \
 			test_diag "run '$(TESTS_DIR)/$$t -d' with a debugger" ; \
 		else \
 			test_ok PASS; \
+			if test ! -z $$TESTS_HYBRID; then rm -f "$(TESTS_DIR)/$$t.out"; fi; \
 		fi; \
 	done; \
 	test_summary 'Summary: PASS '
@@ -218,7 +226,7 @@ check-single-bin: $(BIN_NAME)
 	@exec 2> /dev/null; \
 	if test -z $$BIN_NAME; then \
 		echo "Error: Missing test to run, please set BIN_NAME=<path/to/binary>";  \
-		echo "  example: \`make check-single-bin BIN_NAME=tests/test0\`"; \
+		echo "  example: \'make check-single-bin BIN_NAME=tests/test0\'"; \
 		exit 1; fi; \
 	$(SCRIPT_INIT); \
 	t=$$BIN_NAME; \

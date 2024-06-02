@@ -454,13 +454,6 @@ int bt_test_driver(int argc, char * argv[]) {
    strncat(ext##_filename, __FILE__, strlen(__FILE__)-1); \
    strcat(ext##_filename, #ext)
 
-struct bt_io_test_data {
-	FILE* out_file;
-	FILE* expected_file;
-};
-
-#define VALIDATE int bt_io_validate(struct bt_io_test_data data)
-
 #define RUN_PROGRAM(...)             \
     extern int __real_main(int, char*[]);   \
     int __wrap_main() {                     \
@@ -474,13 +467,7 @@ struct bt_io_test_data {
         fclose(out_file);   \
 		if (result != 0) {	\
 			fprintf(stderr, "Implementation exited with value: %d", result);} \
-		struct bt_io_test_data test_data = {\
-			fopen(out_filename, "r"), 			\
-			fopen(expected_filename, "r")}; 		\
-		result = bt_io_validate(test_data);	\
-		fclose(test_data.out_file);			\
-		fclose(test_data.expected_file);	\
-        return !(result == BT_SUCCESS);      	\
+        return result;      	\
     }
 
 #endif /* BASIC_TESTING_H_INCLUDED */
