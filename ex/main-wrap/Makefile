@@ -2,6 +2,7 @@
 OBJECTS=diamond.o
 LDFLAGS=-Wl,--wrap=main
 
+# TODO: check if it's still required!
 TESTS_IO:=$(wildcard $(TESTS_DIR)/*.in)
 TESTS_IO_NAMES:=$(sort $(patsubst $(TESTS_DIR)/%.in, %, $(TESTS_IO)))
 

@@ -63,7 +63,11 @@
                 "kind": "file"
                 },
             }
-        ]
+        ],
+        "group": {
+            "kind": "test",
+            "isDefault": true
+        }
     }
     
 ]
