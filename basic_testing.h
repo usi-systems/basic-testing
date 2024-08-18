@@ -60,6 +60,7 @@
  */
 #define BT_FAILURE 0
 #define BT_SUCCESS 1
+#define BT_SKIP 2
 
 #define TEST_FAILED do {			\
 	if (bt_fork_tests)			\
@@ -69,6 +70,7 @@
     } while(0)
 
 #define TEST_PASSED do { return (BT_SUCCESS); } while(0)
+#define TEST_SKIPPED do { return (BT_SKIP); } while(0)
 
 #ifdef __cplusplus
 #define BT_POSSIBLY_UNUSED [[maybe_unused]]
@@ -689,6 +691,7 @@ BT_POSSIBLY_UNUSED static int test_name ## _test ()
 
 BT_POSSIBLY_UNUSED static unsigned int bt_fail_count = 0;
 BT_POSSIBLY_UNUSED static unsigned int bt_pass_count = 0;
+BT_POSSIBLY_UNUSED static unsigned int bt_skip_count = 0;
 
 BT_POSSIBLY_UNUSED
 static int bt_run_test(const struct bt_test_descriptor * t) {
@@ -803,6 +806,11 @@ static void bt_run_and_record_test(const struct bt_test_descriptor * t) {
 	bt_fail_count += 1;
 	if (bt_verbose)
 	    printf("test %-40s  FAIL\n", t->name);
+	break;
+    case BT_SKIP:
+	bt_skip_count += 1;
+	if (bt_verbose)
+	    printf("SKIP\n");
 	break;
     case BT_SUCCESS:
 	bt_pass_count += 1;
