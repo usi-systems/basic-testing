@@ -32,7 +32,7 @@ TEST (array_init) {
 
 
 TEST (fail_malloc) {
-    bt_mem_fail_all ();
+    MEM_FAIL_ALL ();
     struct array * array = array_new ();
     CHECK (array == NULL);
     TEST_PASSED;
@@ -51,7 +51,7 @@ TEST (fail_realloc_null) {
     struct array * array = array_new ();
     CHECK (array != NULL);
 
-    bt_mem_fail_all ();
+    MEM_FAIL_ALL ();
     for (int i = 0; i < 4; ++i)
 	CHECK (!array_append (array, i));
 
@@ -88,7 +88,7 @@ TEST (fail_realloc) {
     CHECK_CMP (array_length (array),==,4);
     CHECK_CMP (array_capacity (array),==,8);
 
-    bt_mem_fail_all ();
+    MEM_FAIL_ALL ();
     for (int i = 4; i < 8; ++i)
 	CHECK (array_append (array, i));
 
@@ -134,10 +134,10 @@ TEST (reset_after_fail_realloc) {
 
 
 TEST (fail_malloc_reset) {
-    bt_mem_fail_all ();
+    MEM_FAIL_ALL ();
     struct array * array = array_new ();
     CHECK (array == NULL);
-    bt_mem_reset_allocator ();
+    MEM_RESET_ALLOCATOR ();
     array = array_new ();
     CHECK (array != NULL);
     array_free (array);
@@ -149,14 +149,14 @@ TEST (fail_realloc_null_reset) {
     struct array * array = array_new ();
     CHECK (array != NULL);
 
-    bt_mem_fail_all ();
+    MEM_FAIL_ALL ();
     for (int i = 0; i < 4; ++i)
 	CHECK (!array_append (array, i));
 
     CHECK_CMP (array_length (array),==,0);
     CHECK_CMP (array_capacity (array),==,0);
 
-    bt_mem_reset_allocator ();
+    MEM_RESET_ALLOCATOR ();
     for (int i = 0; i < 4; ++i)
 	CHECK (array_append (array, i));
 
@@ -178,7 +178,7 @@ TEST (fail_realloc_reset) {
     CHECK_CMP (array_length (array),==,4);
     CHECK_CMP (array_capacity (array),==,8);
 
-    bt_mem_fail_all ();
+    MEM_FAIL_ALL ();
     for (int i = 4; i < 8; ++i)
 	CHECK (array_append (array, i));
 
@@ -191,7 +191,7 @@ TEST (fail_realloc_reset) {
     CHECK_CMP (array_length (array),==,8);
     CHECK_CMP (array_capacity (array),==,8);
 
-    bt_mem_reset_allocator ();
+    MEM_RESET_ALLOCATOR ();
     for (int i = 4; i < 16; ++i)
 	CHECK (array_append (array, i));
 
@@ -225,7 +225,7 @@ TEST (array_init_calloc) {
 
 
 TEST (fail_calloc) {
-    bt_mem_fail_all ();
+    MEM_FAIL_ALL ();
     struct array * array = array_new_calloc ();
     CHECK (array == NULL);
     TEST_PASSED;
@@ -244,7 +244,7 @@ TEST (fail_reallocarray_null) {
     struct array * array = array_new ();
     CHECK (array != NULL);
 
-    bt_mem_fail_all ();
+    MEM_FAIL_ALL ();
     for (int i = 0; i < 4; ++i)
 	CHECK (!array_append_reallocarray (array, i));
 
@@ -281,7 +281,7 @@ TEST (fail_reallocarray) {
     CHECK_CMP (array_length (array),==,4);
     CHECK_CMP (array_capacity (array),==,8);
 
-    bt_mem_fail_all ();
+    MEM_FAIL_ALL ();
     for (int i = 4; i < 8; ++i)
 	CHECK (array_append_reallocarray (array, i));
 
@@ -327,10 +327,10 @@ TEST (reset_after_fail_reallocarray) {
 
 
 TEST (fail_calloc_reset) {
-    bt_mem_fail_all ();
+    MEM_FAIL_ALL ();
     struct array * array = array_new_calloc ();
     CHECK (array == NULL);
-    bt_mem_reset_allocator ();
+    MEM_RESET_ALLOCATOR ();
     array = array_new_calloc ();
     CHECK (array != NULL);
     array_free (array);
@@ -342,14 +342,14 @@ TEST (fail_reallocarray_null_reset) {
     struct array * array = array_new ();
     CHECK (array != NULL);
 
-    bt_mem_fail_all ();
+    MEM_FAIL_ALL ();
     for (int i = 0; i < 4; ++i)
 	CHECK (!array_append_reallocarray (array, i));
 
     CHECK_CMP (array_length (array),==,0);
     CHECK_CMP (array_capacity (array),==,0);
 
-    bt_mem_reset_allocator ();
+    MEM_RESET_ALLOCATOR ();
     for (int i = 0; i < 4; ++i)
 	CHECK (array_append_reallocarray (array, i));
 
@@ -371,7 +371,7 @@ TEST (fail_reallocarray_reset) {
     CHECK_CMP (array_length (array),==,4);
     CHECK_CMP (array_capacity (array),==,8);
 
-    bt_mem_fail_all ();
+    MEM_FAIL_ALL ();
     for (int i = 4; i < 8; ++i)
 	CHECK (array_append_reallocarray (array, i));
 
@@ -384,7 +384,7 @@ TEST (fail_reallocarray_reset) {
     CHECK_CMP (array_length (array),==,8);
     CHECK_CMP (array_capacity (array),==,8);
 
-    bt_mem_reset_allocator ();
+    MEM_RESET_ALLOCATOR ();
     for (int i = 4; i < 16; ++i)
 	CHECK (array_append_reallocarray (array, i));
 

@@ -254,7 +254,21 @@ static unsigned int bt_timeout = 3; /* three seconds */
 BT_POSSIBLY_UNUSED
 static int bt_verbose = 1;
 
-static size_t bt_mem_check_disabled = 0;
+static int bt_mem_checks_disabled = 0;
+
+BT_POSSIBLY_UNUSED
+static int MEM_CHECKS_DISABLED () {
+    return bt_mem_checks_disabled;
+}
+
+/* bt_mem_table_failed is a Boolean flag that indicates that the
+   framework has failed to keep track of memory allocations in its
+   hash table, and therefore all memory checks are disabled.  More
+   specifically, a mem-table failure happens when the real malloc
+   succeeds in allocating user memory, but then fails in allocating
+   memory to grow the memory table.
+*/
+static int bt_mem_table_failed = 0;
 
 static size_t bt_mem_failure_count = 0;
 static size_t bt_mem_failure_size = 0;
@@ -305,6 +319,14 @@ static void bt_mem_schedule_failure (size_t count, size_t size) {
     bt_mem_failure_size = size;
 }
 
+#define MEM_SCHEDULE_FAILURE(C,S) do {		\
+    if (bt_mem_checks_disabled) {		\
+        TEST_SKIPPED;				\
+    } else {					\
+        bt_mem_schedule_failure ((C),(S));	\
+    }						\
+} while (0)
+
 /* Cancel any previously scheduled one-time failure of memory
    allocation functions.
  */
@@ -313,6 +335,14 @@ static void bt_mem_cancel_failure (void) {
     bt_mem_failure_count = 0;
     bt_mem_failure_size = 0;
 }
+
+#define MEM_CANCEL_FAILURE(X) do {	\
+    if (bt_mem_checks_disabled) {	\
+        TEST_SKIPPED;			\
+    } else {				\
+        bt_mem_cancel_failure ();	\
+    }					\
+} while (0)
 
 /* Cause all memory allocation functions to fail from now on.  This
    has an immediate effect, meaning that the next allocation function
@@ -325,6 +355,14 @@ static void bt_mem_fail_all (void) {
     bt_mem_budget_curr = 0;
 }
 
+#define MEM_FAIL_ALL(X) do {		\
+    if (bt_mem_checks_disabled) {	\
+        TEST_SKIPPED;			\
+    } else {				\
+        bt_mem_fail_all ();		\
+    }					\
+} while (0)
+
 /* Set a maximum allocation budget in terms of number of invocations
    of memory allocation functions.  As soon as this budget of calls is
    exceeded, any allocation function will fail.  A call to `free' will
@@ -335,6 +373,14 @@ void bt_mem_set_allocation_budget (size_t budget) {
     bt_mem_budget = budget;
     bt_mem_budget_curr = budget;
 }
+
+#define MEM_SET_ALLOCATION_BUDGET(B) do {	\
+    if (bt_mem_checks_disabled) {		\
+        TEST_SKIPPED;				\
+    } else {					\
+        bt_mem_set_allocation_budget (B);	\
+    }						\
+} while (0)
 
 /* Set a maximum allocation budget in terms of amount of memory.  As
    soon as this budget is exceeded, any allocation function will fail.
@@ -347,16 +393,32 @@ void bt_mem_set_bytes_budget (size_t budget) {
     bt_mem_bytes_budget_curr = budget;
 }
 
+#define MEM_SET_BYTES_BUDGET(B) do {	\
+    if (bt_mem_checks_disabled) {	\
+        TEST_SKIPPED;			\
+    } else {				\
+        bt_mem_set_bytes_budget (B);	\
+    }					\
+} while (0)
+
 /* Completely reset the instrumentation of the memory allocation
    functions.  Failures are reset, and invocations and bytes
    budgets are also canceled.
  */
 void bt_mem_reset_allocator (void) {
-    bt_mem_check_disabled = 0;
+    bt_mem_table_failed = 0;
     bt_mem_bytes_budget_enabled = 0;
     bt_mem_budget_enabled = 0;
     bt_mem_cancel_failure ();
 }
+
+#define MEM_RESET_ALLOCATOR(X) do {	\
+    if (bt_mem_checks_disabled) {	\
+        TEST_SKIPPED;			\
+    } else {				\
+        bt_mem_reset_allocator ();	\
+    }					\
+} while (0)
 
 #ifdef __cplusplus
 extern "C" {
@@ -514,6 +576,8 @@ extern "C" {
 
 BT_POSSIBLY_UNUSED
 void *__wrap_malloc (size_t size) {
+    if (bt_mem_checks_disabled)
+	return __real_malloc(size);
     if (size == 0) {
 	fputs("\nmalloc with size 0 is not portable\n", stderr);
 	if (bt_fork_tests) exit(BT_FAILURE);
@@ -548,14 +612,17 @@ void *__wrap_malloc (size_t size) {
 	bt_mem_bytes_budget_curr -= size;
 
     if (!bt_mem_table_set(ret, size)) {
-	bt_mem_check_disabled = 1;
+	bt_mem_table_failed = 1;
     }
-
     return ret;
 }
 
 BT_POSSIBLY_UNUSED
 void __wrap_free (void * ptr) {
+    if (bt_mem_checks_disabled) {
+	__real_free(ptr);
+	return;
+    }
     const struct bt_mem_node *p = bt_mem_table_find(ptr);
     if (!p) {
 	fputs("\nmemory was not allocated via malloc, or possible double free\n", stderr);
@@ -570,13 +637,15 @@ void __wrap_free (void * ptr) {
 	if (bt_mem_bytes_budget_curr > bt_mem_bytes_budget)
 	    bt_mem_bytes_budget_curr = bt_mem_bytes_budget;
     }
-
     bt_mem_table_remove(ptr);
     __real_free(ptr);
 }
 
 BT_POSSIBLY_UNUSED
 void *__wrap_realloc (void * ptr, size_t new_size) {
+    if (bt_mem_checks_disabled)
+	return __real_realloc (ptr, new_size);
+
     if (new_size == 0) {
 	fputs("\nrealloc with size 0 is not portable\n", stderr);
 	if (bt_fork_tests) exit(BT_FAILURE);
@@ -622,7 +691,7 @@ void *__wrap_realloc (void * ptr, size_t new_size) {
     }
 
     if (!bt_mem_table_set(ret, new_size)) {
-	bt_mem_check_disabled = 1;
+	bt_mem_table_failed = 1;
     }
 
     if (ret != ptr)
@@ -631,8 +700,10 @@ void *__wrap_realloc (void * ptr, size_t new_size) {
     return ret;
 }
 
-
 void * __wrap_calloc (size_t nmemb, size_t size) {
+    if (bt_mem_checks_disabled)
+	return __real_calloc(nmemb, size);
+
     if (nmemb == 0 || size == 0 || SIZE_MAX / nmemb <= size)
 	return NULL;
     size_t len = nmemb * size;
@@ -642,6 +713,9 @@ void * __wrap_calloc (size_t nmemb, size_t size) {
 }
 
 void * __wrap_reallocarray (void * ptr, size_t nmemb, size_t size) {
+    if (bt_mem_checks_disabled)
+	return __real_reallocarray(ptr, nmemb, size);
+
     if (nmemb == 0 || size == 0 || SIZE_MAX / nmemb <= size)
 	return NULL;
     size_t len = nmemb * size;
@@ -699,7 +773,7 @@ static int bt_run_test(const struct bt_test_descriptor * t) {
 	int result = t->test_function();
 	if (result == BT_FAILURE) return result;
 
-	if (bt_mem_check_disabled) {
+	if (bt_mem_table_failed) {
 	    printf("\nWARNING: Leakage test is disabled in %s\n", t->name);
 	    result = BT_FAILURE;
 	} else {
@@ -734,7 +808,7 @@ static int bt_run_test(const struct bt_test_descriptor * t) {
 	int result = t->test_function();
 	if (result == BT_FAILURE) exit(result);
 
-	if (bt_mem_check_disabled) {
+	if (bt_mem_table_failed) {
 	    printf("\nWARNING: Leakage test is disabled in %s\n", t->name);
 	    result = BT_FAILURE;
 	} else {
@@ -832,8 +906,8 @@ static void bt_run_and_record_test(const struct bt_test_descriptor * t) {
 #define PRINT_TEST_RESULTS						\
     do {								\
 	if (bt_verbose)							\
-	    printf("Summary: %u/%u test passed\n",			\
-		   bt_pass_count, bt_pass_count + bt_fail_count);	\
+	printf("Summary: %u/%u test passed, %u skipped\n",		\
+        bt_pass_count, bt_pass_count + bt_fail_count, bt_skip_count);	\
     } while (0)
 
 #define ALL_TESTS_PASSED (bt_fail_count == 0)
@@ -847,6 +921,7 @@ const char * bt_test_usage
     "\t-q            :: quiet: minimal output\n"
     "\t-n            :: simple output without a new-line\n"
     "\t-t <seconds>  :: set timeout for each test (default 3s)\n"
+    "\t-m            :: disable memory checks\n"
     "\t-- <names>... :: run the specified tests only\n"
     ;
 
@@ -865,6 +940,8 @@ void bt_parse_args(int argc, char * argv []) {
 	} else if (strcmp(argv[i], "-t")==0 && i + 1 < argc) {
 	    i += 1;
 	    bt_timeout = atoi(argv[i]);
+	} else if (strcmp(argv[i], "-m")==0) {
+	    bt_mem_checks_disabled = 1;
 	} else if (strcmp(argv[i], "--")==0) {
 	    bt_test_names_argc = i + 1;
 	    return;

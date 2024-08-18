@@ -30,7 +30,7 @@ TEST (no_budget_set) {
 
 
 TEST (zero_budget) {
-    bt_mem_set_allocation_budget (0);
+    MEM_SET_ALLOCATION_BUDGET (0);
     struct array * array = array_new ();
     CHECK (array == NULL);
     TEST_PASSED;
@@ -46,7 +46,7 @@ TEST (reset_after_budget) {
 
 
 TEST (simple_budget) {
-    bt_mem_set_allocation_budget (1);
+    MEM_SET_ALLOCATION_BUDGET (1);
     struct array * array = array_new ();
     CHECK (array != NULL);
     struct array * array2 = array_new ();
@@ -57,7 +57,7 @@ TEST (simple_budget) {
 
 
 TEST (free_increment_budget) {
-    bt_mem_set_allocation_budget (1);
+    MEM_SET_ALLOCATION_BUDGET (1);
     struct array * array = array_new ();
     CHECK (array != NULL);
     array_free (array);
@@ -69,7 +69,7 @@ TEST (free_increment_budget) {
 
 
 TEST (budget_realloc_null) {
-    bt_mem_set_allocation_budget (1);
+    MEM_SET_ALLOCATION_BUDGET (1);
     struct array * array = array_new ();
     CHECK (array != NULL);
 
@@ -100,7 +100,7 @@ TEST (reset_after_budget_realloc_null) {
 
 
 TEST (budget_realloc) {
-    bt_mem_set_allocation_budget (2);
+    MEM_SET_ALLOCATION_BUDGET (2);
     struct array * array = array_new ();
     CHECK (array != NULL);
 
@@ -143,10 +143,10 @@ TEST (reset_after_budget_realloc) {
 
 
 TEST (malloc_budget_reset) {
-    bt_mem_set_allocation_budget (0);
+    MEM_SET_ALLOCATION_BUDGET (0);
     struct array * array = array_new ();
     CHECK (array == NULL);
-    bt_mem_reset_allocator ();
+    MEM_RESET_ALLOCATOR ();
     array = array_new ();
     CHECK (array != NULL);
     array_free (array);
@@ -155,7 +155,7 @@ TEST (malloc_budget_reset) {
 
 
 TEST (realloc_null_budget_reset) {
-    bt_mem_set_allocation_budget (1);
+    MEM_SET_ALLOCATION_BUDGET (1);
     struct array * array = array_new ();
     CHECK (array != NULL);
 
@@ -164,7 +164,7 @@ TEST (realloc_null_budget_reset) {
 
     CHECK_CMP (array_length (array),==,0);
     CHECK_CMP (array_capacity (array),==,0);
-    bt_mem_reset_allocator ();
+    MEM_RESET_ALLOCATOR ();
     for (int i = 0; i < 4; ++i)
 	CHECK (array_append (array, i));
 
@@ -177,7 +177,7 @@ TEST (realloc_null_budget_reset) {
 
 
 TEST (realloc_budget_reset) {
-    bt_mem_set_allocation_budget (2);
+    MEM_SET_ALLOCATION_BUDGET (2);
     struct array * array = array_new ();
     CHECK (array != NULL);
     for (int i = 0; i < 8; ++i)
@@ -191,7 +191,7 @@ TEST (realloc_budget_reset) {
 
     CHECK_CMP (array_length (array),==,8);
     CHECK_CMP (array_capacity (array),==,8);
-    bt_mem_reset_allocator ();
+    MEM_RESET_ALLOCATOR ();
     for (int i = 4; i < 16; ++i)
 	CHECK (array_append (array, i));
 
@@ -203,12 +203,12 @@ TEST (realloc_budget_reset) {
 
 
 TEST (set_higher_budget) {
-    bt_mem_set_allocation_budget (1);
+    MEM_SET_ALLOCATION_BUDGET (1);
     struct array * array = array_new ();
     CHECK (array != NULL);
     for (int i = 0; i < 8; ++i)
 	CHECK (!array_append (array, i));
-    bt_mem_set_allocation_budget (2);
+    MEM_SET_ALLOCATION_BUDGET (2);
     for (int i = 8; i < 16; ++i)
 	CHECK (array_append (array, i));
     for (int i = 32; i < 32; ++i)
@@ -226,14 +226,14 @@ TEST (set_higher_budget) {
 
 
 TEST (set_lower_budget) {
-    bt_mem_set_allocation_budget (2);
+    MEM_SET_ALLOCATION_BUDGET (2);
     struct array * array = array_new ();
     CHECK (array != NULL);
     for (int i = 0; i < 8; ++i)
 	CHECK (array_append (array, i));
     for (int i = 8; i < 16; ++i)
 	CHECK (!array_append (array, i));
-    bt_mem_set_allocation_budget (1);
+    MEM_SET_ALLOCATION_BUDGET (1);
     array_free (array);
     array = array_new ();
     CHECK (array != NULL);
@@ -246,7 +246,7 @@ TEST (set_lower_budget) {
 
 
 TEST (zero_budget_calloc) {
-    bt_mem_set_allocation_budget (0);
+    MEM_SET_ALLOCATION_BUDGET (0);
     struct array * array = array_new_calloc ();
     CHECK (array == NULL);
     TEST_PASSED;
@@ -254,7 +254,7 @@ TEST (zero_budget_calloc) {
 
 
 TEST (simple_budget_calloc) {
-    bt_mem_set_allocation_budget (1);
+    MEM_SET_ALLOCATION_BUDGET (1);
     struct array * array = array_new_calloc ();
     CHECK (array != NULL);
     struct array * array2 = array_new_calloc ();
@@ -267,14 +267,14 @@ TEST (simple_budget_calloc) {
 
 
 TEST (reallocarray_budget) {
-    bt_mem_set_allocation_budget (1);
+    MEM_SET_ALLOCATION_BUDGET (1);
     struct array * array = array_new_calloc ();
     CHECK (array != NULL);
     for (int i = 0; i < 4; ++i)
 	CHECK (!array_append_reallocarray (array, i));
     CHECK_CMP (array_length (array),==,0);
     CHECK_CMP (array_capacity (array),==,0);
-    bt_mem_set_allocation_budget (1);
+    MEM_SET_ALLOCATION_BUDGET (1);
     for (int i = 0; i < 4; ++i)
 	CHECK (array_append_reallocarray (array, i));
     CHECK_CMP (array_length (array),==,4);
