@@ -72,7 +72,9 @@
 #define TEST_PASSED do { return (BT_SUCCESS); } while(0)
 #define TEST_SKIPPED do { return (BT_SKIP); } while(0)
 
-#ifdef __cplusplus
+#if defined(__cpp_attributes) && defined(__has_cpp_attribute) && __has_cpp_attribute(maybe_unused)
+#define BT_POSSIBLY_UNUSED [[maybe_unused]]
+#elif defined(__has_c_attribute) && __has_c_attribute(maybe_unused)
 #define BT_POSSIBLY_UNUSED [[maybe_unused]]
 #elif defined(__GNUC__) || defined(__clang__)
 #define BT_POSSIBLY_UNUSED __attribute__((unused))
