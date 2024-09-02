@@ -27,6 +27,7 @@
 #include <stdint.h>
 #include <string.h>
 #include <limits.h>
+#include <dlfcn.h>
 
 #ifdef __cplusplus
 #include <iostream>
@@ -420,23 +421,32 @@ void bt_mem_reset_allocator (void) {
     }					\
 } while (0)
 
-#ifdef __cplusplus
-extern "C" {
-#endif
+// #ifdef __cplusplus
+// extern "C" {
+// #endif
 
-extern void * __real_malloc (size_t);
-extern void __real_free (void *);
-extern void * __real_realloc (void *, size_t);
-extern void * __real_calloc (size_t, size_t);
-extern void * __real_reallocarray (void *, size_t, size_t);
+// extern void * __real_malloc (size_t);
+// extern void __real_free (void *);
+// extern void * __real_realloc (void *, size_t);
+// extern void * __real_calloc (size_t, size_t);
+// extern void * __real_reallocarray (void *, size_t, size_t);
 
-#ifdef __cplusplus
-}
-#endif
+// #ifdef __cplusplus
+// }
+// #endif
+
+
+
+typedef enum {
+    BT_MALLOC,
+    BT_NEW,
+    BT_NEW_ARRAY
+} bt_allocator_t;
 
 struct bt_mem_node {
     void * address;
     size_t size;
+    bt_allocator_t allocator;
     int deleted;
 };
 
@@ -447,10 +457,14 @@ static size_t bt_mem_table_capacity = 0;
 
 BT_POSSIBLY_UNUSED
 static void bt_mem_table_free (void) {
-    if (bt_mem_table) __real_free (bt_mem_table);
+    int checks_tmp = bt_mem_checks_disabled;
+
+    bt_mem_checks_disabled = 1;
+    if (bt_mem_table) free (bt_mem_table);
     bt_mem_table = NULL;
     bt_mem_table_size = 0;
     bt_mem_table_capacity = 0;
+    bt_mem_checks_disabled = checks_tmp;
 }
 
 static size_t bt_ptr_hash (void * address) {
@@ -495,9 +509,15 @@ static struct bt_mem_node * bt_mem_table_find_or_insert (void * address) {
 }
 
 static int bt_mem_rehash (size_t new_cap) {
+    int checks_tmp = bt_mem_checks_disabled;
+
+    bt_mem_checks_disabled = 1;
     struct bt_mem_node * new_table =
-	(struct bt_mem_node *) __real_malloc(new_cap*sizeof(struct bt_mem_node));
-    if (!new_table) return 0;
+	(struct bt_mem_node *) malloc(new_cap*sizeof(struct bt_mem_node));
+    if (!new_table) {
+	bt_mem_checks_disabled = checks_tmp;
+	return 0;
+    }
 
     memset(new_table, 0, new_cap*sizeof(struct bt_mem_node));
     struct bt_mem_node * tmp = bt_mem_table;
@@ -513,32 +533,30 @@ static int bt_mem_rehash (size_t new_cap) {
 	    node->size = tmp[i].size;
 	}
     }
-    if (tmp) __real_free(tmp);
+    if (tmp) free(tmp);
+    bt_mem_checks_disabled = checks_tmp;
     return 1;
 }
 
 BT_POSSIBLY_UNUSED
-static int bt_mem_table_set (void *address, size_t size) {
+static struct bt_mem_node * bt_mem_table_insert (void *address) {
     struct bt_mem_node * node = bt_mem_table_find_or_insert (address);
 
-    if (node && node->address != NULL) {
-	node->size = size;
-	return 1;
-    }
+    if (node && node->address != NULL)
+	return node;
 
     if (bt_mem_table_size*BT_MEM_TABLE_REHASH_HIGH_RATIO >= bt_mem_table_capacity) {
 	size_t new_cap = bt_mem_table_capacity ? 2*bt_mem_table_capacity : BT_MEM_TABLE_MIN_SIZE;
 	if (!bt_mem_rehash(new_cap))
-	    return 0;
+	    return NULL;
 	node = bt_mem_table_find_or_insert (address);
     }
 
     node->address = address;
-    node->size = size;
     node->deleted = 0;
     ++bt_mem_table_size;
 
-    return 1;
+    return node;
 }
 
 BT_POSSIBLY_UNUSED
@@ -575,9 +593,14 @@ extern "C" {
 #endif
 
 BT_POSSIBLY_UNUSED
-void *__wrap_malloc (size_t size) {
+void * malloc (size_t size) {
+    static void *(*libc_malloc)(size_t) = NULL;
+
+    if (!libc_malloc)
+	libc_malloc = (void *(*)(size_t)) dlsym(RTLD_NEXT, "malloc");
+
     if (bt_mem_checks_disabled)
-	return __real_malloc(size);
+	return libc_malloc(size);
     if (size == 0) {
 	fputs("\nmalloc with size 0 is not portable\n", stderr);
 	if (bt_fork_tests) exit(BT_FAILURE);
@@ -603,7 +626,7 @@ void *__wrap_malloc (size_t size) {
     else if (bt_mem_bytes_budget_enabled && bt_mem_bytes_budget_curr < size)
 	return NULL;
 
-    void * ret = __real_malloc(size);
+    void * ret = libc_malloc(size);
     if (!ret) return NULL;
 
     if (bt_mem_budget_enabled)
@@ -611,18 +634,28 @@ void *__wrap_malloc (size_t size) {
     else if (bt_mem_bytes_budget_enabled)
 	bt_mem_bytes_budget_curr -= size;
 
-    if (!bt_mem_table_set(ret, size)) {
+    struct bt_mem_node * node = bt_mem_table_insert (ret);
+    if (ret) {
+	node->allocator = BT_MALLOC;
+	node->size = size;
+    } else
 	bt_mem_table_failed = 1;
-    }
+
     return ret;
 }
 
 BT_POSSIBLY_UNUSED
-void __wrap_free (void * ptr) {
+void free (void * ptr) {
+    static void (*libc_free)(void *) = NULL;
+
+    if (!libc_free)
+	libc_free = (void (*)(void *)) dlsym(RTLD_NEXT, "free");
+
     if (bt_mem_checks_disabled) {
-	__real_free(ptr);
+	libc_free(ptr);
 	return;
     }
+
     const struct bt_mem_node *p = bt_mem_table_find(ptr);
     if (!p) {
 	fputs("\nmemory was not allocated via malloc, or possible double free\n", stderr);
@@ -638,20 +671,25 @@ void __wrap_free (void * ptr) {
 	    bt_mem_bytes_budget_curr = bt_mem_bytes_budget;
     }
     bt_mem_table_remove(ptr);
-    __real_free(ptr);
+    libc_free(ptr);
 }
 
 BT_POSSIBLY_UNUSED
-void *__wrap_realloc (void * ptr, size_t new_size) {
+void * realloc (void * ptr, size_t new_size) {
+    static void *(*libc_realloc)(void *, size_t) = NULL;
+
+    if (!libc_realloc)
+	libc_realloc = (void *(*)(void *, size_t)) dlsym(RTLD_NEXT, "realloc");
+
     if (bt_mem_checks_disabled)
-	return __real_realloc (ptr, new_size);
+	return libc_realloc (ptr, new_size);
 
     if (new_size == 0) {
 	fputs("\nrealloc with size 0 is not portable\n", stderr);
 	if (bt_fork_tests) exit(BT_FAILURE);
 	else abort();
     }
-    if (!ptr) return __wrap_malloc(new_size);
+    if (!ptr) return malloc (new_size);
 
     if (bt_mem_failure_count > 0) {
 	if (--bt_mem_failure_count == 0) {
@@ -677,10 +715,17 @@ void *__wrap_realloc (void * ptr, size_t new_size) {
 	fputs("\nrealloc of not heap allocated memory\n", stderr);
 	if (bt_fork_tests) exit(BT_FAILURE);
 	else abort();
+    } else if (node->allocator != BT_MALLOC) {
+	if (node->allocator == BT_NEW_ARRAY)
+	    fputs("\nrealloc of memory allocated with 'new'\n", stderr);
+	else
+	    fputs("\nrealloc of memory allocated with 'new[]'\n", stderr);
+	if (bt_fork_tests) exit(BT_FAILURE);
+	else abort();
     } else if (bt_mem_bytes_budget_enabled && bt_mem_bytes_budget_curr + node->size < new_size)
 	return NULL;
 
-    void * ret = __real_realloc(ptr, new_size);
+    void * ret = libc_realloc (ptr, new_size);
     if (!ret) return NULL;
 
     if (bt_mem_budget_enabled)
@@ -690,9 +735,11 @@ void *__wrap_realloc (void * ptr, size_t new_size) {
 	bt_mem_bytes_budget_curr -= new_size;
     }
 
-    if (!bt_mem_table_set(ret, new_size)) {
+    struct bt_mem_node * new_node = bt_mem_table_insert (ret);
+    if (new_node)
+	new_node->size = new_size;
+    else
 	bt_mem_table_failed = 1;
-    }
 
     if (ret != ptr)
 	bt_mem_table_remove(ptr);
@@ -700,32 +747,72 @@ void *__wrap_realloc (void * ptr, size_t new_size) {
     return ret;
 }
 
-void * __wrap_calloc (size_t nmemb, size_t size) {
+void * calloc (size_t nmemb, size_t size) {
+    static void *(*libc_calloc)(size_t, size_t) = NULL;
+
+    if (!libc_calloc)
+	libc_calloc = (void *(*)(size_t, size_t)) dlsym(RTLD_NEXT, "calloc");
+
     if (bt_mem_checks_disabled)
-	return __real_calloc(nmemb, size);
+	libc_calloc(nmemb, size);
 
     if (nmemb == 0 || size == 0 || SIZE_MAX / nmemb <= size)
 	return NULL;
     size_t len = nmemb * size;
-    void * p = __wrap_malloc (len);
+    void * p = malloc (len);
     if (p) memset(p, 0, len);
     return p;
 }
 
-void * __wrap_reallocarray (void * ptr, size_t nmemb, size_t size) {
+void * reallocarray (void * ptr, size_t nmemb, size_t size) {
+    static void *(*libc_reallocarray)(void *, size_t, size_t) = NULL;
+
+    if (!libc_reallocarray)
+	libc_reallocarray = (void *(*)(void *, size_t, size_t)) dlsym(RTLD_NEXT, "reallocarray");
+
     if (bt_mem_checks_disabled)
-	return __real_reallocarray(ptr, nmemb, size);
+	return libc_reallocarray(ptr, nmemb, size);
 
     if (nmemb == 0 || size == 0 || SIZE_MAX / nmemb <= size)
 	return NULL;
     size_t len = nmemb * size;
-    return __wrap_realloc (ptr, len);
+    return realloc (ptr, len);
 }
 
 #ifdef __cplusplus
 }
 #endif
 
+
+// #ifdef __cplusplus
+// extern "C" {
+
+// void * __wrap__Znwm (size_t size) {
+//     void * p = __wrap_malloc(size);
+//     if (p)
+// 	bt_mem_table_find (p)->allocator = BT_NEW;
+
+//     return p;
+// }
+
+// void * __wrap__Znam (size_t size) {
+//     void * p = __wrap_malloc(size);
+//     if (p)
+// 	bt_mem_table_find (p)->allocator = BT_NEW_ARRAY;
+
+//     return p;
+// }
+
+// void __wrap__ZdlPvm (void * ptr, size_t) {
+//     __wrap_free(ptr);
+// }
+
+// void __wrap__ZdaPv (void * ptr) {
+//     __wrap_free(ptr);
+// }
+
+// }
+// #endif
 
 struct bt_test_descriptor {
     const char * name;
