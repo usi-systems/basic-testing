@@ -17,19 +17,23 @@ FAIL
 run 'tests/03_double_free_cpp' to see what went wrong
 run 'tests/03_double_free_cpp -d' with a debugger
 Running test 03_memory_leaks...
-Leaked 32 bytes in memory_leak
+leaked 32 bytes
 FAIL
 run 'tests/03_memory_leaks' to see what went wrong
 run 'tests/03_memory_leaks -d' with a debugger
 Running test 03_memory_leaks_cpp...
-Leaked 32 bytes in memory_leak
+leaked 32 bytes
 FAIL
 run 'tests/03_memory_leaks_cpp' to see what went wrong
 run 'tests/03_memory_leaks_cpp -d' with a debugger
-Running test 03_memory_leaks_debug...                FAIL
+Running test 03_memory_leaks_debug...
+leaked 32 bytes
+FAIL
 run 'tests/03_memory_leaks_debug' to see what went wrong
 run 'tests/03_memory_leaks_debug -d' with a debugger
-Running test 03_memory_leaks_debug_cpp...            FAIL
+Running test 03_memory_leaks_debug_cpp...
+leaked 32 bytes
+FAIL
 run 'tests/03_memory_leaks_debug_cpp' to see what went wrong
 run 'tests/03_memory_leaks_debug_cpp -d' with a debugger
 Running test 03_non_portable_malloc...
@@ -66,3 +70,9 @@ Running test 06_scheduled_failures_debug...          PASS
 Running test 06_scheduled_failures_debug_cpp...      PASS
 Running test 07_calloc_reallocarray_failures...      PASS
 Running test 07_calloc_reallocarray_failures_cpp...  PASS
+Running test 08_lib_allocation...
+leaked 8 bytes
+FAIL
+Running test 08_lib_allocation_cpp...
+leaked 8 bytes
+FAIL

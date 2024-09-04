@@ -1,5 +1,5 @@
 #include "basic_testing.h"
-#include <string.h>
+#include <cstring>
 
 
 
@@ -12,4 +12,4 @@ TEST (memory_leak) {
     TEST_PASSED;
 }
 
-MAIN_TEST_DRIVER (memory_leak);
+MAIN_TEST_DRIVER ();

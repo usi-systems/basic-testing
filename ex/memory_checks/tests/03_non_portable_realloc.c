@@ -14,7 +14,7 @@ TEST (realloc_zero_size) {
 
     void * s = realloc (p, 0);
     CHECK (s != NULL);
-    
+
     TEST_PASSED;
 }
 

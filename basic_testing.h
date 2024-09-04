@@ -19,6 +19,7 @@
 #ifndef BASIC_TESTING_H_INCLUDED
 #define BASIC_TESTING_H_INCLUDED
 
+#include <stdarg.h>
 #include <stdalign.h>
 #include <stddef.h>
 #include <stdint.h>
@@ -255,7 +256,11 @@ static unsigned int bt_timeout = 3; /* three seconds */
 BT_POSSIBLY_UNUSED
 static int bt_verbose = 1;
 
-static int bt_mem_checks_disabled = 0;
+/* Disabling the memory checks by default, they will be enabled in the
+   main function.  The reason is that we do not want to keep track of
+   allocations happening before the main function gets invoked.
+*/
+static int bt_mem_checks_disabled = 1;
 
 BT_POSSIBLY_UNUSED
 static int MEM_CHECKS_DISABLED () {
@@ -421,21 +426,6 @@ void bt_mem_reset_allocator (void) {
     }					\
 } while (0)
 
-// #ifdef __cplusplus
-// extern "C" {
-// #endif
-
-// extern void * __real_malloc (size_t);
-// extern void __real_free (void *);
-// extern void * __real_realloc (void *, size_t);
-// extern void * __real_calloc (size_t, size_t);
-// extern void * __real_reallocarray (void *, size_t, size_t);
-
-// #ifdef __cplusplus
-// }
-// #endif
-
-
 
 typedef enum {
     BT_MALLOC,
@@ -586,6 +576,25 @@ static size_t bt_leaked_bytes (void) {
 
     return size;
 }
+
+BT_POSSIBLY_UNUSED
+static void bt_exit_handler (void) {
+    if (bt_mem_table_failed) {
+	fputs("\nWARNING: Leakage test is disabled\n", stderr);
+	abort();
+    }
+
+    size_t leaked = bt_leaked_bytes ();
+    bt_mem_table_free ();
+    if (leaked != 0) {
+	fprintf(stderr, "\nleaked %zu bytes\n", leaked);
+	abort();
+    }
+}
+
+#ifdef __cplusplus
+const int bt_exit_handler_registration = atexit(bt_exit_handler);
+#endif
 
 
 #ifdef __cplusplus
@@ -747,6 +756,7 @@ void * realloc (void * ptr, size_t new_size) {
     return ret;
 }
 
+BT_POSSIBLY_UNUSED
 void * calloc (size_t nmemb, size_t size) {
     static void *(*libc_calloc)(size_t, size_t) = NULL;
 
@@ -764,6 +774,7 @@ void * calloc (size_t nmemb, size_t size) {
     return p;
 }
 
+BT_POSSIBLY_UNUSED
 void * reallocarray (void * ptr, size_t nmemb, size_t size) {
     static void *(*libc_reallocarray)(void *, size_t, size_t) = NULL;
 
@@ -779,40 +790,128 @@ void * reallocarray (void * ptr, size_t nmemb, size_t size) {
     return realloc (ptr, len);
 }
 
+BT_POSSIBLY_UNUSED
+int vfprintf (FILE * stream, const char * format, va_list ap) {
+    static int (*libc_vfprintf)(FILE *, const char *, va_list) = NULL;
+
+    if (!libc_vfprintf)
+	libc_vfprintf = (int (*)(FILE *, const char *, va_list)) dlsym(RTLD_NEXT, "vfprintf");
+
+    int prev_bt_mem_checks_disabled = bt_mem_checks_disabled;
+    bt_mem_checks_disabled = 1;
+    int result = libc_vfprintf(stream, format, ap);
+    bt_mem_checks_disabled = prev_bt_mem_checks_disabled;
+
+    return result;
+}
+
+BT_POSSIBLY_UNUSED
+int vprintf (const char * format, va_list ap) {
+    return vfprintf(stdout, format, ap);
+}
+
+BT_POSSIBLY_UNUSED
+int printf (const char * format, ...) {
+    va_list ap;
+
+    va_start(ap, format);
+    int result = vprintf(format, ap);
+    va_end(ap);
+
+    return result;
+}
+
+BT_POSSIBLY_UNUSED
+int fprintf (FILE * stream, const char * format, ...) {
+    va_list ap;
+
+    va_start(ap, format);
+    int result = vfprintf(stream, format, ap);
+    va_end(ap);
+
+    return result;
+}
+
+BT_POSSIBLY_UNUSED
+int fputs (const char * s, FILE * stream) {
+    static int (*libc_fputs)(const char *, FILE *) = NULL;
+
+    if (!libc_fputs)
+	libc_fputs = (int (*)(const char *, FILE *)) dlsym(RTLD_NEXT, "fputs");
+
+    int prev_bt_mem_checks_disabled = bt_mem_checks_disabled;
+    bt_mem_checks_disabled = 1;
+    int result = libc_fputs(s, stream);
+    bt_mem_checks_disabled = prev_bt_mem_checks_disabled;
+
+    return result;
+}
+
+BT_POSSIBLY_UNUSED
+int puts (const char * s) {
+    static int (*libc_puts)(const char *) = NULL;
+
+    if (!libc_puts)
+	libc_puts = (int (*)(const char *)) dlsym(RTLD_NEXT, "puts");
+
+    int prev_bt_mem_checks_disabled = bt_mem_checks_disabled;
+    bt_mem_checks_disabled = 1;
+    int result = libc_puts(s);
+    bt_mem_checks_disabled = prev_bt_mem_checks_disabled;
+
+    return result;
+}
+
 #ifdef __cplusplus
 }
 #endif
 
+#ifdef __cplusplus
+void * operator new (std::size_t count) {
+    int prev_bt_mem_checks_disabled = bt_mem_checks_disabled;
+    bt_mem_checks_disabled = 1;
+    void * ptr = malloc(count);
+    bt_mem_checks_disabled = prev_bt_mem_checks_disabled;
+    return ptr;
+}
 
-// #ifdef __cplusplus
-// extern "C" {
+void * operator new[] (std::size_t count) {
+    int prev_bt_mem_checks_disabled = bt_mem_checks_disabled;
+    bt_mem_checks_disabled = 1;
+    void * ptr = malloc(count);
+    bt_mem_checks_disabled = prev_bt_mem_checks_disabled;
+    return ptr;
+}
 
-// void * __wrap__Znwm (size_t size) {
-//     void * p = __wrap_malloc(size);
-//     if (p)
-// 	bt_mem_table_find (p)->allocator = BT_NEW;
+void operator delete (void * ptr) noexcept {
+    int prev_bt_mem_checks_disabled = bt_mem_checks_disabled;
+    bt_mem_checks_disabled = 1;
+    free(ptr);
+    bt_mem_checks_disabled = prev_bt_mem_checks_disabled;
+}
 
-//     return p;
-// }
+void operator delete (void * ptr, std::size_t size) noexcept {
+    int prev_bt_mem_checks_disabled = bt_mem_checks_disabled;
+    bt_mem_checks_disabled = 1;
+    free(ptr);
+    bt_mem_checks_disabled = prev_bt_mem_checks_disabled;
+}
 
-// void * __wrap__Znam (size_t size) {
-//     void * p = __wrap_malloc(size);
-//     if (p)
-// 	bt_mem_table_find (p)->allocator = BT_NEW_ARRAY;
+void operator delete[] (void * ptr) noexcept {
+    int prev_bt_mem_checks_disabled = bt_mem_checks_disabled;
+    bt_mem_checks_disabled = 1;
+    free(ptr);
+    bt_mem_checks_disabled = prev_bt_mem_checks_disabled;
+}
 
-//     return p;
-// }
+void operator delete[] (void * ptr, std::size_t size) noexcept {
+    int prev_bt_mem_checks_disabled = bt_mem_checks_disabled;
+    bt_mem_checks_disabled = 1;
+    free(ptr);
+    bt_mem_checks_disabled = prev_bt_mem_checks_disabled;
+}
+#endif
 
-// void __wrap__ZdlPvm (void * ptr, size_t) {
-//     __wrap_free(ptr);
-// }
-
-// void __wrap__ZdaPv (void * ptr) {
-//     __wrap_free(ptr);
-// }
-
-// }
-// #endif
 
 struct bt_test_descriptor {
     const char * name;
@@ -858,20 +957,7 @@ BT_POSSIBLY_UNUSED
 static int bt_run_test(const struct bt_test_descriptor * t) {
     if (RUNNING_ON_VALGRIND || !bt_fork_tests) {
 	int result = t->test_function();
-	if (result == BT_FAILURE) return result;
-
-	if (bt_mem_table_failed) {
-	    printf("\nWARNING: Leakage test is disabled in %s\n", t->name);
-	    result = BT_FAILURE;
-	} else {
-	    size_t leak = bt_leaked_bytes();
-	    if (leak != 0) {
-		printf("\nLeaked %zu bytes in %s\n", leak, t->name);
-		result = BT_FAILURE;
-	    }
-	}
 	bt_mem_reset_allocator();
-	bt_mem_table_free();
 	return result;
     }
     pid_t pid;
@@ -893,19 +979,6 @@ static int bt_run_test(const struct bt_test_descriptor * t) {
 	if (bt_timeout > 0)
 	    alarm(bt_timeout);
 	int result = t->test_function();
-	if (result == BT_FAILURE) exit(result);
-
-	if (bt_mem_table_failed) {
-	    printf("\nWARNING: Leakage test is disabled in %s\n", t->name);
-	    result = BT_FAILURE;
-	} else {
-	    size_t leak = bt_leaked_bytes();
-	    if (leak != 0) {
-		printf("\nLeaked %zu bytes in %s\n", leak, t->name);
-		result = BT_FAILURE;
-	    }
-	}
-	bt_mem_table_free();
 	exit(result);
     } else {
 	/* Parent: Wait until child terminates and analyze its exit code. */
@@ -1059,11 +1132,17 @@ int bt_test_driver(int argc, char * argv[]) {
 #ifdef __cplusplus
 #define MAIN_TEST_DRIVER(...)						\
     int main(int argc, char * argv[]) {					\
+	bt_mem_checks_disabled = 0;					\
+	if (bt_exit_handler_registration)				\
+	    fputs("WARNING: failed to register memory checks handler\n", stderr); \
 	return bt_test_driver(argc, argv);				\
     }
 #else
 #define MAIN_TEST_DRIVER(...)						\
     int main(int argc, char * argv[]) {					\
+	bt_mem_checks_disabled = 0;					\
+	if (atexit(bt_exit_handler))					\
+	    fputs("WARNING: failed to register memory checks handler\n", stderr); \
 	struct bt_test_descriptor * suite [] = { __VA_ARGS__ };		\
 	const unsigned n = sizeof(suite)/sizeof(struct bt_test_descriptor *); \
 	for (unsigned i = 0; i < n; ++i)				\
