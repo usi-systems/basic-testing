@@ -9,9 +9,10 @@ TEST (compile) {
 
 
 TEST (invalid_free) {
-    double_free ();
+    new_object_free ();
     TEST_PASSED;
 }
 
 
-MAIN_TEST_DRIVER (compile, invalid_free);
+
+MAIN_TEST_DRIVER();

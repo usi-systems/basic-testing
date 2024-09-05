@@ -184,8 +184,6 @@ check-io-sh: compile $(TESTS_IO) $(TESTS_SH) $(PROGRAMS_DRIVERS)
 	done; \
 	test_summary 'Summary: PASS '
 
-# BT_LDFLAGS := -Wl,--wrap=malloc,--wrap=free,--wrap=realloc,--wrap=calloc,--wrap=reallocarray
-# BT_CXXLDFLAGS := -Wl,--wrap=_Znwm,--wrap=_Znam,--wrap=_ZdlPvm,--wrap=_ZdaPv
 
 $(TESTS_DIR)/%: $(TESTS_DIR)/%.c $(OBJECTS)
 	$(CC) $(CFLAGS) $(LDFLAGS) $(TESTS_DIR)/$*.c $(OBJECTS) -o $@
