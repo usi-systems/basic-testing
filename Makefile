@@ -17,7 +17,7 @@ all-examples:
 	   $(MAKE) -C "$$ex" -j $(PARALLELISM) TEST_COLORS=no > "$$ex".out || test_result=FAIL ; \
 	   if test -r "$$ex".expected; \
 	   	then { IFS=''; while read l; \
-	   	        do if fgrep -q "$$l" "$$ex".out; \
+	   	        do if grep -Fq "$$l" "$$ex".out; \
 			   then : ; \
 	   		   else echo "'$$ex.out' must contain '$$l'"; \
 	   		        test_result=FAIL; \
