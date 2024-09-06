@@ -15,16 +15,16 @@ jobs:
     
     strategy:
       matrix:
-        os: [ubuntu-24.04, ubuntu-22.04, macos-latest]
-        compiler_suite: [gcc, clang]
+        os: [macos-14, ubuntu-22.04, ubuntu-24.04]
+        compiler_suite: [clang, gcc]
 
     steps:
     - uses: actions/checkout@v4
 
     - name: Run tests
       run: |
-        if [ "${{ matrix.compiler_suite }}" = 'gcc' ]; then
-            make CC=gcc CXX=g++ FAIL_FAST=yes PARALLELISM=4
-        elif [ "${{ matrix.compiler_suite }}" = 'clang' ]; then
+        if [ "${{ matrix.compiler_suite }}" = 'clang' ]; then
             make CC=clang CXX=clang++ FAIL_FAST=yes PARALLELISM=4
+        elif [ "${{ matrix.compiler_suite }}" = 'gcc' ]; then
+            make CC=gcc CXX=g++ FAIL_FAST=yes PARALLELISM=4
         fi
