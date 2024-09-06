@@ -1,8 +1,12 @@
-CFLAGS=-Wall -g $(COVERAGE_FLAGS)
-CXXFLAGS=-Wall -g $(COVERAGE_FLAGS)
+# define
+# OBJECTS=
+# and/or
+# PROGRAMS=
+
+CFLAGS=-Wall -Werror -g $(COVERAGE_FLAGS)
+CXXFLAGS=-Wall -Werror -g $(COVERAGE_FLAGS)
 
 COVERAGE_FLAGS=$(if $(WITH_COVERAGE),--coverage,)
-
 SHELL=/bin/bash
 
 TIMEOUT=8
@@ -180,11 +184,13 @@ check-io-sh: compile $(TESTS_IO) $(TESTS_SH) $(PROGRAMS_DRIVERS)
 	done; \
 	test_summary 'Summary: PASS '
 
+BT_LDFLAGS := -Wl,--wrap=malloc,--wrap=free,--wrap=realloc,--wrap=calloc,--wrap=reallocarray
+
 $(TESTS_DIR)/%: $(TESTS_DIR)/%.c $(OBJECTS)
-	$(CC) $(CFLAGS) $(LDFLAGS) $(TESTS_DIR)/$*.c $(OBJECTS) -o $@
+	$(CC) $(CFLAGS) $(LDFLAGS) $(BT_LDFLAGS) $(TESTS_DIR)/$*.c $(OBJECTS) -o $@
 
 $(TESTS_DIR)/%: $(TESTS_DIR)/%.cc $(OBJECTS)
-	$(CXX) -std=c++11 $(CXXFLAGS) $(LDFLAGS) $(TESTS_DIR)/$*.cc $(OBJECTS) -o $@
+	$(CXX) -std=c++11 $(CXXFLAGS) $(LDFLAGS) $(BT_LDFLAGS) $(TESTS_DIR)/$*.cc $(OBJECTS) -o $@
 
 .PHONY: check-bin
 check-bin: $(TESTS_BIN)
@@ -196,7 +202,7 @@ check-bin: $(TESTS_BIN)
 			echo ;\
 			valgrind $(VALGRIND_FLAGS) "$(TESTS_DIR)/$$t" 2>&1 &\
 		else \
-			"$(TESTS_DIR)/$$t" -q &\
+			"$(TESTS_DIR)/$$t" -q 2>&1 &\
 		fi; \
 		$(SCRIPT_GET_TEST_RESULT); \
 		if test $$res = KO; then \
