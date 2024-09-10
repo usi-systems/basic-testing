@@ -124,21 +124,21 @@ void double_delete_array (void) {
 
 void non_malloc_free (void) {
     int a = 10;
-    int * p;
+    int * p = nullptr;
     if (a < 20) p = &a;
     std::free (p);
 }
 
 void non_new_delete (void) {
     int a = 10;
-    int * p;
+    int * p = nullptr;
     if (a < 20) p = &a;
     delete p;
 }
 
 void non_new_array_delete (void) {
     int a = 10;
-    int * p;
+    int * p = nullptr;
     if (a < 20) p = &a;
     delete[] p;
 
