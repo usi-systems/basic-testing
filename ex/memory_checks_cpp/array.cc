@@ -194,7 +194,7 @@ void malloc_object_delete_array (void) {
 
 void new_object_delete_array (void) {
     int a = 10;
-    int * p;
+    int * p = nullptr;
     if (a < 20)
 	p = new int {10};
     delete[] p;
