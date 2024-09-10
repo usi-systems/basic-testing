@@ -5,6 +5,7 @@
 
 CFLAGS=-Wall -Werror -g $(COVERAGE_FLAGS)
 CXXFLAGS=-Wall -Werror -g $(COVERAGE_FLAGS)
+LDFLAGS += -ldl
 
 COVERAGE_FLAGS=$(if $(WITH_COVERAGE),--coverage,)
 SHELL=/bin/bash
