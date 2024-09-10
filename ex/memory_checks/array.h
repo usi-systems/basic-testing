@@ -19,4 +19,9 @@ int array_element(struct array * array, size_t index);
 int array_append(struct array * array, int value);
 int array_append_reallocarray(struct array * array, int value);
 
+void double_free (void);
+void non_malloc_free (void);
+void * malloc_zero_size (void);
+void * realloc_zero_size (void * ptr);
+
 #endif

@@ -1,7 +1,6 @@
 #include "basic_testing.h"
-extern "C" {
 #include "../array.h"
-}
+#include <new>
 
 
 
@@ -394,6 +393,95 @@ TEST (fail_reallocarray_reset) {
     array_free (array);
     TEST_PASSED;
 }
+
+
+TEST (array_new_init) {
+    array_cpp * array = array_cpp_new ();
+    CHECK (array != nullptr);
+    CHECK_CMP (array->length (),==,0);
+    CHECK_CMP (array->capacity (),==,0);
+    array_cpp_delete (array);
+    TEST_PASSED;
+}
+
+
+TEST (fail_new) {
+    MEM_FAIL_ALL ();
+    try {
+	array_cpp * array = array_cpp_new ();
+	array_cpp_delete (array);
+    } catch (const std::bad_alloc& e) {
+	TEST_PASSED;
+    }
+
+    TEST_FAILED;
+}
+
+
+TEST (reset_after_fail_new) {
+    array_cpp * array = array_cpp_new ();
+    CHECK (array != nullptr);
+    CHECK_CMP (array->length (),==,0);
+    CHECK_CMP (array->capacity (),==,0);
+    array_cpp_delete (array);
+    TEST_PASSED;
+}
+
+
+TEST (array_new_array_init) {
+    array_cpp array;
+
+    CHECK_CMP (array.length (),==,0);
+    CHECK_CMP (array.capacity (),==,0);
+
+    for (int i = 0; i < 100; ++i)
+	array.append (i);
+ 
+    CHECK_CMP (array.length (),==,100);
+    CHECK_CMP (array.capacity (),>=,100);
+
+    for (int i = 0; i < 100; ++i)
+	CHECK_CMP (array[i],==,i);
+    
+    TEST_PASSED;
+}
+
+
+TEST (fail_new_array) {
+    MEM_FAIL_ALL ();
+    array_cpp array;
+
+    try {
+	for (int i = 0; i < 100; ++i)
+	    array.append (i);
+    } catch (const std::bad_alloc& e) {
+	CHECK_CMP (array.length (),==,0);
+	CHECK_CMP (array.capacity (),==,0);
+	TEST_PASSED;
+    }
+
+    TEST_FAILED;
+}
+
+
+TEST (reset_after_fail_new_array) {
+    array_cpp array;
+
+    CHECK_CMP (array.length (),==,0);
+    CHECK_CMP (array.capacity (),==,0);
+
+    for (int i = 0; i < 100; ++i)
+	array.append (i);
+ 
+    CHECK_CMP (array.length (),==,100);
+    CHECK_CMP (array.capacity (),>=,100);
+
+    for (int i = 0; i < 100; ++i)
+	CHECK_CMP (array[i],==,i);
+    
+    TEST_PASSED;
+}
+
 
 
 

@@ -8,9 +8,10 @@ TEST (compile) {
 }
 
 
-TEST (malloc_zero_size) {
-    void * p = malloc (0);
-    CHECK (p != NULL);
+TEST (debugger) {
+    int result = system ("./tests/06_scheduled_failures -d >/dev/null");
+
+    if (result != 0) TEST_FAILED;
     TEST_PASSED;
 }
 

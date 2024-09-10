@@ -1,6 +1,6 @@
 #include "basic_testing.h"
 #include <cstdlib>
-
+#include "../array.h"
 
 
 TEST (compile) {
@@ -8,11 +8,8 @@ TEST (compile) {
 }
 
 
-TEST (invalid_free) {
-    int a = 10;
-    void * p = malloc (10);
-    if (a < 20) free (p);
-    free (p);
+TEST (invalid_delete) {
+    double_delete ();
     TEST_PASSED;
 }
 

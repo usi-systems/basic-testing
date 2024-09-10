@@ -19,6 +19,7 @@
 #ifndef BASIC_TESTING_H_INCLUDED
 #define BASIC_TESTING_H_INCLUDED
 
+#include <stdarg.h>
 #include <stdalign.h>
 #include <stddef.h>
 #include <stdint.h>
@@ -27,9 +28,14 @@
 #include <stdint.h>
 #include <string.h>
 #include <limits.h>
+#include <dlfcn.h>
+#include <math.h>
+#include <float.h>
+#include <time.h>
 
 #ifdef __cplusplus
 #include <iostream>
+#include <new>
 #endif
 
 #include <sys/types.h>
@@ -116,7 +122,10 @@
 #define CHECK_CMP(X,OP,Y) do {						\
 	auto x_ = (X);							\
 	decltype (x_) y_ = (Y);						\
-	if (!(x_ OP y_)) {						\
+        if (!(x_ OP y_)							\
+	    && !(typeid(x_) == typeid(double)				\
+		 && strcmp(#OP, "==") == 0				\
+		 && fabs (x_ - y_) <= DBL_EPSILON)) {			\
 	    std::cout << std::endl <<__FILE__ << ":" << __LINE__	\
 		      << ": Assertion '"#X" "#OP" "#Y"' failed: "	\
                       << x_ << " "#OP" " << y_ << std::endl;		\
@@ -192,7 +201,7 @@ static int check_cmp_double (double x, double y, const char * op,
 			     const char * filename, int line) {
     int res;
     switch (bt_operator(op)) {
-    case BT_EQ: res = (x == y); break;
+    case BT_EQ: res = (fabs (x - y) <= DBL_EPSILON); break;
     case BT_NE: res = (x != y); break;
     case BT_LE: res = (x <= y); break;
     case BT_GE: res = (x >= y); break;
@@ -254,7 +263,11 @@ static unsigned int bt_timeout = 3; /* three seconds */
 BT_POSSIBLY_UNUSED
 static int bt_verbose = 1;
 
-static int bt_mem_checks_disabled = 0;
+/* Disabling the memory checks by default, they will be enabled in the
+   main function.  The reason is that we do not want to keep track of
+   allocations happening before the main function gets invoked.
+*/
+static int bt_mem_checks_disabled = 1;
 
 BT_POSSIBLY_UNUSED
 static int MEM_CHECKS_DISABLED () {
@@ -369,9 +382,19 @@ static void bt_mem_fail_all (void) {
    count as -1.
  */
 void bt_mem_set_allocation_budget (size_t budget) {
+    if (!bt_mem_budget_enabled)
+	bt_mem_budget_curr = budget;
+    else if (bt_mem_budget == budget)
+	return;
+    else if (bt_mem_budget < budget)
+	bt_mem_budget_curr += budget-bt_mem_budget;
+    else if (bt_mem_budget - bt_mem_budget_curr >= budget)
+	bt_mem_budget_curr = 0;
+    else
+	bt_mem_budget_curr = budget - (bt_mem_budget - bt_mem_budget_curr);
+
     bt_mem_budget_enabled = 1;
     bt_mem_budget = budget;
-    bt_mem_budget_curr = budget;
 }
 
 #define MEM_SET_ALLOCATION_BUDGET(B) do {	\
@@ -388,9 +411,20 @@ void bt_mem_set_allocation_budget (size_t budget) {
    allocated with pointer `p'.
  */
 void bt_mem_set_bytes_budget (size_t budget) {
+    if (!bt_mem_bytes_budget_enabled)
+	bt_mem_bytes_budget_curr = budget;
+    else if (bt_mem_bytes_budget == budget)
+	return;
+    else if (bt_mem_bytes_budget < budget)
+	bt_mem_bytes_budget_curr += budget-bt_mem_bytes_budget;
+    else if (bt_mem_bytes_budget - bt_mem_bytes_budget_curr >= budget)
+	bt_mem_bytes_budget_curr = 0;
+    else
+	bt_mem_bytes_budget_curr = budget - (bt_mem_bytes_budget - bt_mem_bytes_budget_curr);
+
+    
     bt_mem_bytes_budget_enabled = 1;
     bt_mem_bytes_budget = budget;
-    bt_mem_bytes_budget_curr = budget;
 }
 
 #define MEM_SET_BYTES_BUDGET(B) do {	\
@@ -420,23 +454,21 @@ void bt_mem_reset_allocator (void) {
     }					\
 } while (0)
 
-#ifdef __cplusplus
-extern "C" {
-#endif
-
-extern void * __real_malloc (size_t);
-extern void __real_free (void *);
-extern void * __real_realloc (void *, size_t);
-extern void * __real_calloc (size_t, size_t);
-extern void * __real_reallocarray (void *, size_t, size_t);
 
 #ifdef __cplusplus
-}
+enum bt_allocator {
+    MALLOC,
+    NEW,
+    NEW_ARRAY,
+};
 #endif
 
 struct bt_mem_node {
     void * address;
     size_t size;
+#ifdef __cplusplus
+    enum bt_allocator allocator;
+#endif
     int deleted;
 };
 
@@ -447,10 +479,14 @@ static size_t bt_mem_table_capacity = 0;
 
 BT_POSSIBLY_UNUSED
 static void bt_mem_table_free (void) {
-    if (bt_mem_table) __real_free (bt_mem_table);
+    int checks_tmp = bt_mem_checks_disabled;
+
+    bt_mem_checks_disabled = 1;
+    if (bt_mem_table) free (bt_mem_table);
     bt_mem_table = NULL;
     bt_mem_table_size = 0;
     bt_mem_table_capacity = 0;
+    bt_mem_checks_disabled = checks_tmp;
 }
 
 static size_t bt_ptr_hash (void * address) {
@@ -495,9 +531,15 @@ static struct bt_mem_node * bt_mem_table_find_or_insert (void * address) {
 }
 
 static int bt_mem_rehash (size_t new_cap) {
+    int checks_tmp = bt_mem_checks_disabled;
+
+    bt_mem_checks_disabled = 1;
     struct bt_mem_node * new_table =
-	(struct bt_mem_node *) __real_malloc(new_cap*sizeof(struct bt_mem_node));
-    if (!new_table) return 0;
+	(struct bt_mem_node *) malloc(new_cap*sizeof(struct bt_mem_node));
+    if (!new_table) {
+	bt_mem_checks_disabled = checks_tmp;
+	return 0;
+    }
 
     memset(new_table, 0, new_cap*sizeof(struct bt_mem_node));
     struct bt_mem_node * tmp = bt_mem_table;
@@ -511,34 +553,35 @@ static int bt_mem_rehash (size_t new_cap) {
 	    struct bt_mem_node * node = bt_mem_table_find_or_insert(tmp[i].address);
 	    node->address = tmp[i].address;
 	    node->size = tmp[i].size;
+#ifdef __cplusplus
+	    node->allocator = tmp[i].allocator;
+#endif
 	}
     }
-    if (tmp) __real_free(tmp);
+    if (tmp) free(tmp);
+    bt_mem_checks_disabled = checks_tmp;
     return 1;
 }
 
 BT_POSSIBLY_UNUSED
-static int bt_mem_table_set (void *address, size_t size) {
+static struct bt_mem_node * bt_mem_table_insert (void *address) {
     struct bt_mem_node * node = bt_mem_table_find_or_insert (address);
 
-    if (node && node->address != NULL) {
-	node->size = size;
-	return 1;
-    }
+    if (node && node->address != NULL)
+	return node;
 
     if (bt_mem_table_size*BT_MEM_TABLE_REHASH_HIGH_RATIO >= bt_mem_table_capacity) {
 	size_t new_cap = bt_mem_table_capacity ? 2*bt_mem_table_capacity : BT_MEM_TABLE_MIN_SIZE;
 	if (!bt_mem_rehash(new_cap))
-	    return 0;
+	    return NULL;
 	node = bt_mem_table_find_or_insert (address);
     }
 
     node->address = address;
-    node->size = size;
     node->deleted = 0;
     ++bt_mem_table_size;
 
-    return 1;
+    return node;
 }
 
 BT_POSSIBLY_UNUSED
@@ -569,15 +612,39 @@ static size_t bt_leaked_bytes (void) {
     return size;
 }
 
+BT_POSSIBLY_UNUSED
+static void bt_exit_handler (void) {
+    if (bt_mem_table_failed) {
+	fputs("\nWARNING: Leakage test is disabled\n", stderr);
+	abort();
+    }
+
+    size_t leaked = bt_leaked_bytes ();
+    bt_mem_table_free ();
+    if (leaked != 0) {
+	fprintf(stderr, "\nleaked %zu bytes\n", leaked);
+	abort();
+    }
+}
+
+#ifdef __cplusplus
+const int bt_exit_handler_registration = atexit(bt_exit_handler);
+#endif
+
 
 #ifdef __cplusplus
 extern "C" {
 #endif
 
 BT_POSSIBLY_UNUSED
-void *__wrap_malloc (size_t size) {
+void * malloc (size_t size) {
+    static void *(*libc_malloc)(size_t) = NULL;
+
+    if (!libc_malloc)
+	libc_malloc = (void *(*)(size_t)) dlsym(RTLD_NEXT, "malloc");
+
     if (bt_mem_checks_disabled)
-	return __real_malloc(size);
+	return libc_malloc(size);
     if (size == 0) {
 	fputs("\nmalloc with size 0 is not portable\n", stderr);
 	if (bt_fork_tests) exit(BT_FAILURE);
@@ -589,7 +656,7 @@ void *__wrap_malloc (size_t size) {
 	    return 0;
 	}
     }
-    if (bt_mem_failure_size > 0) {
+   if (bt_mem_failure_size > 0) {
 	if (size < bt_mem_failure_size) {
 	    bt_mem_failure_size -= size;
 	} else {
@@ -603,7 +670,7 @@ void *__wrap_malloc (size_t size) {
     else if (bt_mem_bytes_budget_enabled && bt_mem_bytes_budget_curr < size)
 	return NULL;
 
-    void * ret = __real_malloc(size);
+    void * ret = libc_malloc(size);
     if (!ret) return NULL;
 
     if (bt_mem_budget_enabled)
@@ -611,18 +678,78 @@ void *__wrap_malloc (size_t size) {
     else if (bt_mem_bytes_budget_enabled)
 	bt_mem_bytes_budget_curr -= size;
 
-    if (!bt_mem_table_set(ret, size)) {
+    struct bt_mem_node * node = bt_mem_table_insert (ret);
+    if (ret) {
+#ifdef __cplusplus
+	node->allocator = bt_allocator::MALLOC;
+#endif
+	node->size = size;
+    } else
 	bt_mem_table_failed = 1;
-    }
+
     return ret;
 }
 
+
+
+
+#ifdef __cplusplus
 BT_POSSIBLY_UNUSED
-void __wrap_free (void * ptr) {
+void bt_mem_deallocator (void * ptr, enum bt_allocator allocator) {
+    static void (*libc_free)(void *) = NULL;
+
+    if (!libc_free)
+	libc_free = (void (*)(void *)) dlsym(RTLD_NEXT, "free");
+
     if (bt_mem_checks_disabled) {
-	__real_free(ptr);
+	libc_free(ptr);
 	return;
     }
+
+    const struct bt_mem_node *p = bt_mem_table_find(ptr);
+    if (!p) {
+	fputs("\nmemory was not allocated via malloc/new/new[], or possible double free/delete/delete[]\n", stderr);
+	if (bt_fork_tests) exit(BT_FAILURE);
+	else abort();
+    } else if (p->allocator != allocator) {
+	if (p->allocator == bt_allocator::MALLOC)
+	    fputs("\nobjects allocated with malloc should be deallocated free\n", stderr);
+	else if (p->allocator == bt_allocator::NEW)
+	    fputs("\nobjects allocated with new should be deallocated delete\n", stderr);
+	else if (p->allocator == bt_allocator::NEW_ARRAY)
+	    fputs("\nobjects allocated with new[] should be deallocated delete[]\n", stderr);
+
+	if (bt_fork_tests) exit(BT_FAILURE);
+	else abort();
+    }
+
+    if (bt_mem_budget_enabled && ++bt_mem_budget_curr > bt_mem_budget)
+	bt_mem_budget_curr = bt_mem_budget;
+    else if (bt_mem_bytes_budget_enabled) {
+	bt_mem_bytes_budget_curr += p->size;
+	if (bt_mem_bytes_budget_curr > bt_mem_bytes_budget)
+	    bt_mem_bytes_budget_curr = bt_mem_bytes_budget;
+    }
+    bt_mem_table_remove(ptr);
+    libc_free(ptr);
+}
+
+void free (void * ptr) {
+    bt_mem_deallocator (ptr, bt_allocator::MALLOC);
+}
+#else 
+BT_POSSIBLY_UNUSED
+void free (void * ptr) {
+    static void (*libc_free)(void *) = NULL;
+
+    if (!libc_free)
+	libc_free = (void (*)(void *)) dlsym(RTLD_NEXT, "free");
+
+    if (bt_mem_checks_disabled) {
+	libc_free(ptr);
+	return;
+    }
+
     const struct bt_mem_node *p = bt_mem_table_find(ptr);
     if (!p) {
 	fputs("\nmemory was not allocated via malloc, or possible double free\n", stderr);
@@ -638,20 +765,26 @@ void __wrap_free (void * ptr) {
 	    bt_mem_bytes_budget_curr = bt_mem_bytes_budget;
     }
     bt_mem_table_remove(ptr);
-    __real_free(ptr);
+    libc_free(ptr);
 }
+#endif
 
 BT_POSSIBLY_UNUSED
-void *__wrap_realloc (void * ptr, size_t new_size) {
+void * realloc (void * ptr, size_t new_size) {
+    static void *(*libc_realloc)(void *, size_t) = NULL;
+
+    if (!libc_realloc)
+	libc_realloc = (void *(*)(void *, size_t)) dlsym(RTLD_NEXT, "realloc");
+
     if (bt_mem_checks_disabled)
-	return __real_realloc (ptr, new_size);
+	return libc_realloc (ptr, new_size);
 
     if (new_size == 0) {
 	fputs("\nrealloc with size 0 is not portable\n", stderr);
 	if (bt_fork_tests) exit(BT_FAILURE);
 	else abort();
     }
-    if (!ptr) return __wrap_malloc(new_size);
+    if (!ptr) return malloc (new_size);
 
     if (bt_mem_failure_count > 0) {
 	if (--bt_mem_failure_count == 0) {
@@ -677,10 +810,19 @@ void *__wrap_realloc (void * ptr, size_t new_size) {
 	fputs("\nrealloc of not heap allocated memory\n", stderr);
 	if (bt_fork_tests) exit(BT_FAILURE);
 	else abort();
-    } else if (bt_mem_bytes_budget_enabled && bt_mem_bytes_budget_curr + node->size < new_size)
+    }
+#ifdef __cplusplus
+    if (node->allocator != bt_allocator::MALLOC) {	
+	fputs("\nrealloc of memory not allocated via malloc\n", stderr);
+	if (bt_fork_tests) exit(BT_FAILURE);
+	else abort();
+    }
+#endif
+    if (bt_mem_bytes_budget_enabled && bt_mem_bytes_budget_curr + node->size < new_size)
 	return NULL;
 
-    void * ret = __real_realloc(ptr, new_size);
+    
+    void * ret = libc_realloc (ptr, new_size);
     if (!ret) return NULL;
 
     if (bt_mem_budget_enabled)
@@ -690,9 +832,11 @@ void *__wrap_realloc (void * ptr, size_t new_size) {
 	bt_mem_bytes_budget_curr -= new_size;
     }
 
-    if (!bt_mem_table_set(ret, new_size)) {
+    struct bt_mem_node * new_node = bt_mem_table_insert (ret);
+    if (new_node)
+	new_node->size = new_size;
+    else
 	bt_mem_table_failed = 1;
-    }
 
     if (ret != ptr)
 	bt_mem_table_remove(ptr);
@@ -700,29 +844,243 @@ void *__wrap_realloc (void * ptr, size_t new_size) {
     return ret;
 }
 
-void * __wrap_calloc (size_t nmemb, size_t size) {
+BT_POSSIBLY_UNUSED
+void * calloc (size_t nmemb, size_t size) {
+    static void *(*libc_calloc)(size_t, size_t) = NULL;
+
+    if (!libc_calloc)
+	libc_calloc = (void *(*)(size_t, size_t)) dlsym(RTLD_NEXT, "calloc");
+
     if (bt_mem_checks_disabled)
-	return __real_calloc(nmemb, size);
+	libc_calloc(nmemb, size);
 
     if (nmemb == 0 || size == 0 || SIZE_MAX / nmemb <= size)
 	return NULL;
     size_t len = nmemb * size;
-    void * p = __wrap_malloc (len);
+    void * p = malloc (len);
     if (p) memset(p, 0, len);
     return p;
 }
 
-void * __wrap_reallocarray (void * ptr, size_t nmemb, size_t size) {
+BT_POSSIBLY_UNUSED
+void * reallocarray (void * ptr, size_t nmemb, size_t size) {
+    static void *(*libc_reallocarray)(void *, size_t, size_t) = NULL;
+
+    if (!libc_reallocarray)
+	libc_reallocarray = (void *(*)(void *, size_t, size_t)) dlsym(RTLD_NEXT, "reallocarray");
+
     if (bt_mem_checks_disabled)
-	return __real_reallocarray(ptr, nmemb, size);
+	return libc_reallocarray(ptr, nmemb, size);
 
     if (nmemb == 0 || size == 0 || SIZE_MAX / nmemb <= size)
 	return NULL;
     size_t len = nmemb * size;
-    return __wrap_realloc (ptr, len);
+    return realloc (ptr, len);
 }
 
+BT_POSSIBLY_UNUSED
+int vfprintf (FILE * stream, const char * format, va_list ap) {
+    static int (*libc_vfprintf)(FILE *, const char *, va_list) = NULL;
+
+    if (!libc_vfprintf)
+	libc_vfprintf = (int (*)(FILE *, const char *, va_list)) dlsym(RTLD_NEXT, "vfprintf");
+
+    int prev_bt_mem_checks_disabled = bt_mem_checks_disabled;
+    bt_mem_checks_disabled = 1;
+    int result = libc_vfprintf(stream, format, ap);
+    bt_mem_checks_disabled = prev_bt_mem_checks_disabled;
+
+    return result;
+}
+
+BT_POSSIBLY_UNUSED
+int vprintf (const char * format, va_list ap) {
+    return vfprintf(stdout, format, ap);
+}
+
+BT_POSSIBLY_UNUSED
+int printf (const char * format, ...) {
+    va_list ap;
+
+    va_start(ap, format);
+    int result = vprintf(format, ap);
+    va_end(ap);
+
+    return result;
+}
+
+BT_POSSIBLY_UNUSED
+int fprintf (FILE * stream, const char * format, ...) {
+    va_list ap;
+
+    va_start(ap, format);
+    int result = vfprintf(stream, format, ap);
+    va_end(ap);
+
+    return result;
+}
+
+BT_POSSIBLY_UNUSED
+int fputs (const char * s, FILE * stream) {
+    static int (*libc_fputs)(const char *, FILE *) = NULL;
+
+    if (!libc_fputs)
+	libc_fputs = (int (*)(const char *, FILE *)) dlsym(RTLD_NEXT, "fputs");
+
+    int prev_bt_mem_checks_disabled = bt_mem_checks_disabled;
+    bt_mem_checks_disabled = 1;
+    int result = libc_fputs(s, stream);
+    bt_mem_checks_disabled = prev_bt_mem_checks_disabled;
+
+    return result;
+}
+
+BT_POSSIBLY_UNUSED
+int puts (const char * s) {
+    static int (*libc_puts)(const char *) = NULL;
+
+    if (!libc_puts)
+	libc_puts = (int (*)(const char *)) dlsym(RTLD_NEXT, "puts");
+
+    int prev_bt_mem_checks_disabled = bt_mem_checks_disabled;
+    bt_mem_checks_disabled = 1;
+    int result = libc_puts(s);
+    bt_mem_checks_disabled = prev_bt_mem_checks_disabled;
+
+    return result;
+}
+    
+BT_POSSIBLY_UNUSED
+char * strerror (int errnum) {
+    static char *(*libc_strerror)(int) = NULL;
+
+    if (!libc_strerror)
+	libc_strerror = (char *(*)(int)) dlsym(RTLD_NEXT, "strerror");
+
+    int prev_bt_mem_checks_disabled = bt_mem_checks_disabled;
+    bt_mem_checks_disabled = 1;
+    char * result = libc_strerror (errnum);
+    bt_mem_checks_disabled = prev_bt_mem_checks_disabled;
+
+    return result;
+}
+
+BT_POSSIBLY_UNUSED
+time_t mktime (struct tm * tp) {
+    static time_t (*libc_mktime)(struct tm *) = NULL;
+
+    if (!libc_mktime)
+	libc_mktime = (time_t (*)(struct tm *)) dlsym(RTLD_NEXT, "mktime");
+
+    int prev_bt_mem_checks_disabled = bt_mem_checks_disabled;
+    bt_mem_checks_disabled = 1;
+    time_t result = libc_mktime (tp);
+    bt_mem_checks_disabled = prev_bt_mem_checks_disabled;
+
+    return result;
+}
+
+BT_POSSIBLY_UNUSED
+struct tm * gmtime (const time_t * tp) {
+    static struct tm *(*libc_gmtime)(const time_t *) = NULL;
+
+    if (!libc_gmtime)
+	libc_gmtime = (struct tm *(*)(const time_t *)) dlsym(RTLD_NEXT, "gmtime");
+
+    int prev_bt_mem_checks_disabled = bt_mem_checks_disabled;
+    bt_mem_checks_disabled = 1;
+    struct tm * result = libc_gmtime (tp);
+    bt_mem_checks_disabled = prev_bt_mem_checks_disabled;
+
+    return result;
+}
+
+BT_POSSIBLY_UNUSED
+struct tm * localtime (const time_t * tp) {
+    static struct tm *(*libc_localtime)(const time_t *) = NULL;
+
+    if (!libc_localtime)
+	libc_localtime = (struct tm *(*)(const time_t *)) dlsym(RTLD_NEXT, "localtime");
+
+    int prev_bt_mem_checks_disabled = bt_mem_checks_disabled;
+    bt_mem_checks_disabled = 1;
+    struct tm * result = libc_localtime (tp);
+    bt_mem_checks_disabled = prev_bt_mem_checks_disabled;
+
+    return result;
+}
+
+BT_POSSIBLY_UNUSED
+char * asctime (const struct tm * tp) {
+    static char *(*libc_asctime)(const struct tm *) = NULL;
+
+    if (!libc_asctime)
+	libc_asctime = (char *(*)(const struct tm *)) dlsym(RTLD_NEXT, "asctime");
+
+    int prev_bt_mem_checks_disabled = bt_mem_checks_disabled;
+    bt_mem_checks_disabled = 1;
+    char * result = libc_asctime (tp);
+    bt_mem_checks_disabled = prev_bt_mem_checks_disabled;
+
+    return result;
+}
+
+BT_POSSIBLY_UNUSED
+char * ctime (const time_t * tp) {
+    static char *(*libc_ctime)(const time_t *) = NULL;
+
+    if (!libc_ctime)
+	libc_ctime = (char *(*)(const time_t *)) dlsym(RTLD_NEXT, "ctime");
+
+    int prev_bt_mem_checks_disabled = bt_mem_checks_disabled;
+    bt_mem_checks_disabled = 1;
+    char * result = libc_ctime (tp);
+    bt_mem_checks_disabled = prev_bt_mem_checks_disabled;
+
+    return result;
+}
+
+
+    
 #ifdef __cplusplus
+}
+#endif
+
+#ifdef __cplusplus
+void * operator new (std::size_t count) {
+    void * ptr = malloc(count);
+    if (!ptr) throw std::bad_alloc {};
+    else if (bt_mem_checks_disabled || bt_mem_table_failed)
+	return ptr;
+    struct bt_mem_node * node = bt_mem_table_find (ptr);
+    node->allocator = bt_allocator::NEW;
+    return ptr;
+}
+
+void * operator new[] (std::size_t count) {
+    void * ptr = malloc(count);
+    if (!ptr) throw std::bad_alloc {};
+    else if (bt_mem_checks_disabled || bt_mem_table_failed)
+	return ptr;
+    struct bt_mem_node * node = bt_mem_table_find (ptr);
+    node->allocator = bt_allocator::NEW_ARRAY;
+    return ptr;
+}
+
+void operator delete (void * ptr) noexcept {
+    bt_mem_deallocator (ptr, bt_allocator::NEW);
+}
+
+void operator delete (void * ptr, std::size_t size) noexcept {
+    bt_mem_deallocator (ptr, bt_allocator::NEW);
+}
+
+void operator delete[] (void * ptr) noexcept {
+    bt_mem_deallocator (ptr, bt_allocator::NEW_ARRAY);
+}
+
+void operator delete[] (void * ptr, std::size_t size) noexcept {
+    bt_mem_deallocator (ptr, bt_allocator::NEW_ARRAY);
 }
 #endif
 
@@ -771,20 +1129,7 @@ BT_POSSIBLY_UNUSED
 static int bt_run_test(const struct bt_test_descriptor * t) {
     if (RUNNING_ON_VALGRIND || !bt_fork_tests) {
 	int result = t->test_function();
-	if (result == BT_FAILURE) return result;
-
-	if (bt_mem_table_failed) {
-	    printf("\nWARNING: Leakage test is disabled in %s\n", t->name);
-	    result = BT_FAILURE;
-	} else {
-	    size_t leak = bt_leaked_bytes();
-	    if (leak != 0) {
-		printf("\nLeaked %zu bytes in %s\n", leak, t->name);
-		result = BT_FAILURE;
-	    }
-	}
 	bt_mem_reset_allocator();
-	bt_mem_table_free();
 	return result;
     }
     pid_t pid;
@@ -806,19 +1151,6 @@ static int bt_run_test(const struct bt_test_descriptor * t) {
 	if (bt_timeout > 0)
 	    alarm(bt_timeout);
 	int result = t->test_function();
-	if (result == BT_FAILURE) exit(result);
-
-	if (bt_mem_table_failed) {
-	    printf("\nWARNING: Leakage test is disabled in %s\n", t->name);
-	    result = BT_FAILURE;
-	} else {
-	    size_t leak = bt_leaked_bytes();
-	    if (leak != 0) {
-		printf("\nLeaked %zu bytes in %s\n", leak, t->name);
-		result = BT_FAILURE;
-	    }
-	}
-	bt_mem_table_free();
 	exit(result);
     } else {
 	/* Parent: Wait until child terminates and analyze its exit code. */
@@ -972,11 +1304,17 @@ int bt_test_driver(int argc, char * argv[]) {
 #ifdef __cplusplus
 #define MAIN_TEST_DRIVER(...)						\
     int main(int argc, char * argv[]) {					\
+	bt_mem_checks_disabled = 0;					\
+	if (bt_exit_handler_registration)				\
+	    fputs("WARNING: failed to register memory checks handler\n", stderr); \
 	return bt_test_driver(argc, argv);				\
     }
 #else
 #define MAIN_TEST_DRIVER(...)						\
     int main(int argc, char * argv[]) {					\
+	bt_mem_checks_disabled = 0;					\
+	if (atexit(bt_exit_handler))					\
+	    fputs("WARNING: failed to register memory checks handler\n", stderr); \
 	struct bt_test_descriptor * suite [] = { __VA_ARGS__ };		\
 	const unsigned n = sizeof(suite)/sizeof(struct bt_test_descriptor *); \
 	for (unsigned i = 0; i < n; ++i)				\

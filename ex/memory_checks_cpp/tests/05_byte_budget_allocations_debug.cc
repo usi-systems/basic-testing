@@ -7,7 +7,7 @@ TEST(compile) {
 
 
 TEST(debugger) {
-    int result = system("./tests/05_byte_budget_allocations_cpp -d >/dev/null");
+    int result = system("./tests/05_byte_budget_allocations -d >/dev/null");
 
     if (result != 0) TEST_FAILED;
     TEST_PASSED;

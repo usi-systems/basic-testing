@@ -1,5 +1,5 @@
 #include "basic_testing.h"
-#include <stdlib.h>
+#include <cstdlib>
 
 
 
@@ -9,7 +9,7 @@ TEST (compile) {
 
 
 TEST (debugger) {
-    int result = system ("./tests/04_budget_allocations_cpp -d >/dev/null");
+    int result = system ("./tests/01_fail_allocations -d >/dev/null");
 
     if (result != 0) TEST_FAILED;
     TEST_PASSED;

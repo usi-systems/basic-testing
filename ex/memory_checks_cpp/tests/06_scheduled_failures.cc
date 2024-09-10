@@ -1,8 +1,7 @@
 #include "basic_testing.h"
 #include <cstdlib>
-extern "C" {
+#include <new>
 #include "../array.h"
-}
 
 
 
@@ -212,6 +211,130 @@ TEST (reallocarray_failure_reset) {
 	CHECK (array_append_reallocarray (array, i));
     CHECK (array_append_reallocarray (array, 10));
     array_free (array);
+    TEST_PASSED;
+}
+
+
+TEST (fail_next_count_new) {
+    MEM_SCHEDULE_FAILURE (1, 1000);
+
+    try {
+	array_cpp * array = array_cpp_new ();
+	array_cpp_delete (array);
+    } catch (const std::bad_alloc& e) {
+	array_cpp * array = array_cpp_new ();
+	CHECK (array != nullptr);
+	array_cpp_delete (array);
+	TEST_PASSED;
+    }
+    TEST_FAILED;
+}
+
+
+TEST (fail_next_size_new) {
+    MEM_SCHEDULE_FAILURE (1000, sizeof(array_cpp));
+    try {
+	array_cpp * array = array_cpp_new ();
+	array_cpp_delete (array);
+    } catch (const std::bad_alloc& e) {
+	array_cpp * array = array_cpp_new ();
+	CHECK (array != nullptr);
+	array_cpp_delete (array);
+	TEST_PASSED;
+    }
+    TEST_FAILED;
+}
+
+
+TEST (no_failure_new) {
+    MEM_SCHEDULE_FAILURE (0, 0);
+    array_cpp * array = array_cpp_new ();
+    CHECK (array != nullptr);
+    array_cpp_delete (array);
+    TEST_PASSED;
+}
+
+
+TEST (failure_reset_new) {
+    MEM_SCHEDULE_FAILURE (1, sizeof(array_cpp));
+    MEM_CANCEL_FAILURE ();
+    array_cpp * array = array_cpp_new ();
+    CHECK (array != nullptr);
+    array_cpp_delete (array);
+    TEST_PASSED;
+}
+
+
+TEST (setting_failure_new) {
+    MEM_SCHEDULE_FAILURE (1, sizeof(array_cpp));
+    TEST_PASSED;
+}
+
+
+TEST (reset_after_failure_new) {
+    array_cpp * array = array_cpp_new ();
+    CHECK (array != nullptr);
+    array_cpp_delete (array);
+    TEST_PASSED;
+}
+
+
+TEST (fail_next_count_new_array) {
+    MEM_SCHEDULE_FAILURE (1, 1000);
+    array_cpp array;
+
+    try {
+	array.append(1);
+    } catch (const std::bad_alloc& e) {
+	array.append(1);
+	TEST_PASSED;
+    }
+    TEST_FAILED;
+}
+
+
+TEST (fail_next_size_new_array) {
+    MEM_SCHEDULE_FAILURE (1000, array_cpp::initial_cap*sizeof(int));
+    array_cpp array;
+    try {
+	array.append(1);
+    } catch (const std::bad_alloc& e) {
+	array.append(1);
+	TEST_PASSED;
+    }
+    TEST_FAILED;
+}
+
+
+TEST (no_failure_new_array) {
+    MEM_SCHEDULE_FAILURE (0, 0);
+    array_cpp array;
+    for (int i = 0; i < 100; ++i)
+	array.append (i);
+    TEST_PASSED;
+}
+
+
+TEST (failure_reset_new_array) {
+    MEM_SCHEDULE_FAILURE (1, sizeof (array_cpp));
+    MEM_CANCEL_FAILURE ();
+    array_cpp array;
+    for (int i = 0; i < 100; ++i)
+	array.append (i);
+    TEST_PASSED;
+}
+
+
+TEST (setting_failure_new_array) {
+    MEM_SCHEDULE_FAILURE (1, sizeof (array_cpp));
+    TEST_PASSED;
+}
+
+
+TEST (reset_after_failure_new_array) {
+    array_cpp array;
+    for (int i = 0; i < 100; ++i)
+	array.append (i);
     TEST_PASSED;
 }
 

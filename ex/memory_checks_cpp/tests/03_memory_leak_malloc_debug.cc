@@ -1,5 +1,5 @@
 #include "basic_testing.h"
-#include <cstdlib>
+#include <stdlib.h>
 
 
 
@@ -9,7 +9,7 @@ TEST (compile) {
 
 
 TEST (debugger) {
-    int result = system ("./tests/01_fail_allocations_cpp -d >/dev/null");
+    int result = system ("./tests/03_memory_leak_malloc -d >/dev/null");
 
     if (result != 0) TEST_FAILED;
     TEST_PASSED;
@@ -17,4 +17,4 @@ TEST (debugger) {
 
 
 
-MAIN_TEST_DRIVER ();
+MAIN_TEST_DRIVER (compile, debugger);

@@ -3,7 +3,7 @@ all: all-examples
 
 FAIL_FAST ?= no
 EXAMPLES = ex/example1 ex/example2 ex/example3 ex/example4 \
-	ex/example5 ex/example6 ex/example7 ex/example8 ex/memory_checks \
+	ex/example5 ex/example6 ex/example7 ex/example8 ex/memory_checks ex/memory_checks_cpp \
 	'ex ws/example1 ws' 'ex ws/example2 ws' 'ex ws/example3 ws' 'ex ws/example4 ws' \
 	'ex ws/example5 ws' 'ex ws/example6 ws' 'ex ws/example7 ws' 'ex ws/example8 ws'
 PARALLELISM ?= 1
