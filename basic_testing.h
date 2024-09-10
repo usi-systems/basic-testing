@@ -19,6 +19,10 @@
 #ifndef BASIC_TESTING_H_INCLUDED
 #define BASIC_TESTING_H_INCLUDED
 
+#ifndef _GNU_SOURCE
+#define _GNU_SOURCE
+#endif
+
 #include <stdarg.h>
 #include <stdalign.h>
 #include <stddef.h>
@@ -28,7 +32,6 @@
 #include <stdint.h>
 #include <string.h>
 #include <limits.h>
-#define _GNU_SOURCE
 #include <dlfcn.h>
 #include <math.h>
 #include <float.h>
