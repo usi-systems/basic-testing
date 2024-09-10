@@ -184,6 +184,7 @@ check-io-sh: compile $(TESTS_IO) $(TESTS_SH) $(PROGRAMS_DRIVERS)
 	done; \
 	test_summary 'Summary: PASS '
 
+LDFLAGS += -ldl
 
 $(TESTS_DIR)/%: $(TESTS_DIR)/%.c $(OBJECTS)
 	$(CC) $(CFLAGS) $(LDFLAGS) $(TESTS_DIR)/$*.c $(OBJECTS) -o $@
