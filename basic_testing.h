@@ -62,6 +62,10 @@
 #define RUNNING_ON_VALGRIND 0
 #endif
 
+#ifndef _GNU_SOURCE
+#define _GNU_GNU_SOURCE
+#endif
+
 /* SUCCESS/FAILURE macros
  */
 #define BT_FAILURE 0
