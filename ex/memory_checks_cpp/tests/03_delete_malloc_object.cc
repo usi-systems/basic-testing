@@ -8,10 +8,11 @@ TEST (compile) {
 }
 
 
-TEST (invalid_free) {
-    double_free ();
+TEST (invalid_delete) {
+    malloc_object_delete ();
     TEST_PASSED;
 }
 
 
-MAIN_TEST_DRIVER (compile, invalid_free);
+
+MAIN_TEST_DRIVER();

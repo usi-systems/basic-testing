@@ -1,6 +1,6 @@
 #include "basic_testing.h"
+#include <cstdlib>
 #include "../array.h"
-#include <stdlib.h>
 
 
 
@@ -275,13 +275,13 @@ TEST (set_lower_budget_after_allocations) {
 
 TEST (smaller_size_realloc) {
     MEM_SET_BYTES_BUDGET (8*sizeof (int));
-    int * p = malloc (8*sizeof (int));
+    int * p = (int *) malloc (8*sizeof (int));
     CHECK (p != NULL);
-    int * i = malloc (sizeof (int));
+    int * i = (int *) malloc (sizeof (int));
     CHECK (i == NULL);
-    p = realloc (p, 4*sizeof (int));
+    p = (int *) realloc (p, 4*sizeof (int));
     CHECK (p != NULL);
-    i = malloc (sizeof (int));
+    i = (int *) malloc (sizeof (int));
     CHECK (i != NULL);
     free (p);
     free (i);
@@ -329,24 +329,280 @@ TEST (reallocarray_budget) {
 
 
 
-MAIN_TEST_DRIVER (compile,
-		 no_budget_set,
-		 zero_budget,
-		 reset_after_budget,
-		 simple_budget,
-		 free_increment_budget,
-		 budget_realloc_null,
-		 reset_after_budget_realloc_null,
-		 budget_realloc,
-		 reset_after_budget_realloc,
-		 malloc_budget_reset,
-		 realloc_null_budget_reset,
-		 realloc_budget_reset,
-		 set_same_budget,
-		 set_higher_budget,
-		 set_lower_budget,
-		 set_lower_budget_after_allocations,
-		 smaller_size_realloc,
-		 zero_budget_calloc,
-		 simple_budget_calloc,
-		 reallocarray_budget);
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+TEST (zero_budget_new) {
+    MEM_SET_BYTES_BUDGET (0);
+    try {
+	array_cpp * array = array_cpp_new ();
+	array_cpp_delete (array);
+    } catch (const std::bad_alloc& e) {
+	TEST_PASSED;
+    }
+    TEST_FAILED;
+}
+
+
+TEST (reset_after_budget_new) {
+    array_cpp * array = array_cpp_new ();
+    CHECK (array != nullptr);
+    array_cpp_delete (array);
+    TEST_PASSED;
+}
+
+
+TEST (simple_budget_new) {
+    MEM_SET_BYTES_BUDGET (sizeof(array_cpp));
+    array_cpp * array = array_cpp_new ();
+    CHECK (array != nullptr);
+    try {
+	array_cpp * array2 = array_cpp_new ();
+	array_cpp_delete (array2);
+    } catch (const std::bad_alloc& e) {
+	array_cpp_delete(array);
+	TEST_PASSED;
+    }
+    array_cpp_delete (array);
+    TEST_FAILED;
+}
+
+
+TEST (delete_increment_budget) {
+    MEM_SET_BYTES_BUDGET (sizeof(array_cpp));
+    array_cpp * array = array_cpp_new ();
+    CHECK (array != nullptr);
+    array_cpp_delete (array);
+    array_cpp * array2 = array_cpp_new ();
+    CHECK (array2 != nullptr);
+    array_cpp_delete (array2);
+    TEST_PASSED;
+}
+
+
+TEST (new_budget_reset) {
+    MEM_SET_BYTES_BUDGET (0);
+    try {
+	array_cpp *  array = array_cpp_new ();
+	array_cpp_delete(array);
+    } catch (const std::bad_alloc& e) {
+	MEM_RESET_ALLOCATOR ();
+	array_cpp * array = array_cpp_new ();
+	CHECK (array != nullptr);
+	array_cpp_delete (array);
+	TEST_PASSED;
+    }
+    TEST_FAILED;
+}
+
+
+TEST (budget_new_array) {
+    array_cpp array;
+    MEM_SET_BYTES_BUDGET (array_cpp::initial_cap*sizeof(int));
+
+    try {
+	for (int i = 0; i < 100; ++i)
+	    array.append (i);
+    } catch (const std::bad_alloc& e) {
+	CHECK_CMP (array.length (),==,array_cpp::initial_cap);
+	CHECK_CMP (array.capacity (),==,array_cpp::initial_cap);
+	TEST_PASSED;
+    }
+
+    TEST_FAILED;
+}
+
+
+TEST (reset_after_budget_new_array) {
+    array_cpp array;
+
+    CHECK_CMP (array.length (),==,0);
+    CHECK_CMP (array.capacity (),==,0);
+
+    for (int i = 0; i < 4; ++i)
+	array.append (i);
+
+    CHECK_CMP (array.length (),==,4);
+    CHECK_CMP (array.capacity (),==,array_cpp::initial_cap);
+    TEST_PASSED;
+}
+
+
+TEST (reset_budget_new_array) {
+    MEM_SET_BYTES_BUDGET (0);
+    array_cpp array;
+
+    try {
+	for (int i = 0; i < 4; ++i)
+	    array.append (i);
+    } catch (const std::bad_alloc& e) {
+	CHECK_CMP (array.length (),==,0);
+	CHECK_CMP (array.capacity (),==,0);
+
+	MEM_RESET_ALLOCATOR ();
+	for (int i = 0; i < 4; ++i)
+	    array.append (i);
+
+	CHECK_CMP (array.length (),==,4);
+	CHECK_CMP (array.capacity (),==,array_cpp::initial_cap);
+	TEST_PASSED;
+    }
+
+    TEST_FAILED;
+}
+
+
+TEST (set_same_budget_new) {
+    MEM_SET_BYTES_BUDGET (sizeof(array_cpp));
+    array_cpp * array = array_cpp_new ();
+    CHECK (array != nullptr);
+    try {
+	array_cpp * array2 = array_cpp_new ();
+	array_cpp_delete (array2);
+    } catch (const std::bad_alloc& e) {
+	MEM_SET_BYTES_BUDGET (sizeof(array_cpp));
+	try {
+	    array_cpp * array2 = array_cpp_new ();
+	    array_cpp_delete (array2);
+	} catch (const std::bad_alloc& e) {
+	    array_cpp_delete (array);
+	    TEST_PASSED;
+	}
+    }
+
+    array_cpp_delete (array);
+    TEST_FAILED;
+}
+
+
+TEST (set_same_budget_new_array) {
+    MEM_SET_BYTES_BUDGET (array_cpp::initial_cap*sizeof(int));
+    array_cpp array;
+    for (int i = 0; i < 8; ++i)
+	array.append (i);
+    try {
+	array.append (9);
+    } catch (const std::bad_alloc& e) {
+	MEM_SET_BYTES_BUDGET (array_cpp::initial_cap*sizeof(int));
+	try {
+	    array.append (9);
+	} catch (const std::bad_alloc& e) {
+	    TEST_PASSED;
+	}
+    }
+
+    TEST_FAILED;
+}
+
+
+TEST (set_higher_budget_new) {
+    MEM_SET_BYTES_BUDGET (sizeof(array_cpp));
+    array_cpp * array = array_cpp_new ();
+    CHECK (array != nullptr);
+    try {
+	for (int i = 0; i < 8; ++i)
+	    array->append (i);
+    } catch (const std::bad_alloc& e) {
+	MEM_SET_BYTES_BUDGET (sizeof(array_cpp) + array_cpp::initial_cap*sizeof(int));
+	for (int i = 0; i < 8; ++i)
+	    array->append (i);
+	try {
+	    for (int i = 8; i < 16; ++i)
+		array->append (i);
+	} catch (const std::bad_alloc& e) {
+	    array_cpp_delete (array);
+	    MEM_SET_BYTES_BUDGET (sizeof(array_cpp) + array_cpp::initial_cap*3*sizeof(int));
+	    array = array_cpp_new ();
+	    CHECK (array != nullptr);
+	    for (int i = 0; i < 16; ++i)
+		array->append (i);
+	    array_cpp_delete (array);
+	    TEST_PASSED;
+	}
+    }
+    array_cpp_delete (array);
+    TEST_FAILED;
+}
+
+
+TEST (set_lower_budget_new) {
+    MEM_SET_BYTES_BUDGET (sizeof(array_cpp) + 100*sizeof(int));
+    array_cpp * array = array_cpp_new ();
+    MEM_SET_BYTES_BUDGET (sizeof(array_cpp) + 8*sizeof(int));
+    for (int i = 0; i < 8; ++i)
+	array->append (i);
+    
+    try {
+	array->append (9);
+    } catch (const std::bad_alloc& e) {
+	MEM_SET_BYTES_BUDGET (sizeof(array_cpp));
+
+	try {
+	    for (int i = 8; i < 16; ++i)
+		array->append (i);
+	} catch (const std::bad_alloc& e) {
+	    array_cpp_delete (array);
+	    array = array_cpp_new ();
+	    CHECK (array != nullptr);
+
+	    try {
+		for (int i = 0; i < 8; ++i)
+		    array->append (i);
+	    } catch (const std::bad_alloc& e) {
+		array_cpp_delete (array);
+		TEST_PASSED;
+	    }
+	}
+    }
+
+    array_cpp_delete (array);
+    TEST_FAILED;
+}
+
+
+TEST (set_lower_budget_after_allocations_new) {
+    MEM_SET_BYTES_BUDGET (sizeof(array_cpp) + 16*sizeof(int));
+    array_cpp * array = array_cpp_new ();
+    CHECK (array != nullptr);
+    for (int i = 0; i < 8; ++i)
+	array->append (i);
+    MEM_SET_BYTES_BUDGET (sizeof(array_cpp) + 8*sizeof(int));
+    try {
+	array->append (17);
+    } catch(const std::bad_alloc& e) {
+	array_cpp_delete (array);
+	TEST_PASSED;
+    }
+    array_cpp_delete (array);
+    TEST_FAILED;
+}
+
+
+
+
+MAIN_TEST_DRIVER ();

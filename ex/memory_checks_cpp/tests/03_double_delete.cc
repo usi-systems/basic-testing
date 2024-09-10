@@ -1,6 +1,6 @@
 #include "basic_testing.h"
+#include <cstdlib>
 #include "../array.h"
-
 
 
 TEST (compile) {
@@ -8,10 +8,11 @@ TEST (compile) {
 }
 
 
-TEST (invalid_free) {
-    double_free ();
+TEST (invalid_delete) {
+    double_delete ();
     TEST_PASSED;
 }
 
 
-MAIN_TEST_DRIVER (compile, invalid_free);
+
+MAIN_TEST_DRIVER ();

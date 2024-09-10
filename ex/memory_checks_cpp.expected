@@ -2,11 +2,63 @@ Running test 00_hash_map...                          PASS
 Running test 01_fail_allocations...                  PASS
 Running test 01_fail_allocations_debug...            PASS
 Running test 02_allocations_recording...             PASS
+Running test 03_delete_array_malloc_object...        
+objects allocated with malloc should be deallocated free
+
+leaked 4 bytes
+FAIL
+run 'tests/03_delete_array_malloc_object' to see what went wrong
+run 'tests/03_delete_array_malloc_object -d' with a debugger
+Running test 03_delete_array_new_object...           
+objects allocated with new should be deallocated delete
+
+leaked 4 bytes
+FAIL
+run 'tests/03_delete_array_new_object' to see what went wrong
+run 'tests/03_delete_array_new_object -d' with a debugger
+Running test 03_delete_malloc_object...              
+objects allocated with malloc should be deallocated free
+
+leaked 4 bytes
+FAIL
+run 'tests/03_delete_malloc_object' to see what went wrong
+run 'tests/03_delete_malloc_object -d' with a debugger
+Running test 03_delete_new_array_object...           
+objects allocated with new[] should be deallocated delete[]
+
+leaked 40 bytes
+FAIL
+run 'tests/03_delete_new_array_object' to see what went wrong
+run 'tests/03_delete_new_array_object -d' with a debugger
+Running test 03_double_delete...                     
+memory was not allocated via malloc/new/new[], or possible double free/delete/delete[]
+FAIL
+run 'tests/03_double_delete' to see what went wrong
+run 'tests/03_double_delete -d' with a debugger
+Running test 03_double_delete_array...               
+memory was not allocated via malloc/new/new[], or possible double free/delete/delete[]
+FAIL
+run 'tests/03_double_delete_array' to see what went wrong
+run 'tests/03_double_delete_array -d' with a debugger
 Running test 03_double_free...                       
-memory was not allocated via malloc, or possible double free
+memory was not allocated via malloc/new/new[], or possible double free/delete/delete[]
 FAIL
 run 'tests/03_double_free' to see what went wrong
 run 'tests/03_double_free -d' with a debugger
+Running test 03_free_new_array_object...             
+objects allocated with new[] should be deallocated delete[]
+
+leaked 40 bytes
+FAIL
+run 'tests/03_free_new_array_object' to see what went wrong
+run 'tests/03_free_new_array_object -d' with a debugger
+Running test 03_free_new_object...                   
+objects allocated with new should be deallocated delete
+
+leaked 4 bytes
+FAIL
+run 'tests/03_free_new_object' to see what went wrong
+run 'tests/03_free_new_object -d' with a debugger
 Running test 03_memory_leak_calloc...                
 leaked 24 bytes
 FAIL
@@ -27,6 +79,26 @@ leaked 24 bytes
 FAIL
 run 'tests/03_memory_leak_malloc_debug' to see what went wrong
 run 'tests/03_memory_leak_malloc_debug -d' with a debugger
+Running test 03_memory_leak_new...                   
+leaked 24 bytes
+FAIL
+run 'tests/03_memory_leak_new' to see what went wrong
+run 'tests/03_memory_leak_new -d' with a debugger
+Running test 03_memory_leak_new_array...             
+leaked 56 bytes
+FAIL
+run 'tests/03_memory_leak_new_array' to see what went wrong
+run 'tests/03_memory_leak_new_array -d' with a debugger
+Running test 03_memory_leak_new_array_debug...       
+leaked 56 bytes
+FAIL
+run 'tests/03_memory_leak_new_array_debug' to see what went wrong
+run 'tests/03_memory_leak_new_array_debug -d' with a debugger
+Running test 03_memory_leak_new_debug...             
+leaked 24 bytes
+FAIL
+run 'tests/03_memory_leak_new_debug' to see what went wrong
+run 'tests/03_memory_leak_new_debug -d' with a debugger
 Running test 03_memory_leak_realloc...               
 leaked 56 bytes
 FAIL
@@ -58,10 +130,20 @@ FAIL
 run 'tests/03_memory_leaks_debug' to see what went wrong
 run 'tests/03_memory_leaks_debug -d' with a debugger
 Running test 03_non_malloc_free...                   
-memory was not allocated via malloc, or possible double free
+memory was not allocated via malloc/new/new[], or possible double free/delete/delete[]
 FAIL
 run 'tests/03_non_malloc_free' to see what went wrong
 run 'tests/03_non_malloc_free -d' with a debugger
+Running test 03_non_new_array_delete...              
+memory was not allocated via malloc/new/new[], or possible double free/delete/delete[]
+FAIL
+run 'tests/03_non_new_array_delete' to see what went wrong
+run 'tests/03_non_new_array_delete -d' with a debugger
+Running test 03_non_new_delete...                    
+memory was not allocated via malloc/new/new[], or possible double free/delete/delete[]
+FAIL
+run 'tests/03_non_new_delete' to see what went wrong
+run 'tests/03_non_new_delete -d' with a debugger
 Running test 03_non_portable_malloc...               
 malloc with size 0 is not portable
 FAIL
@@ -74,6 +156,12 @@ leaked 10 bytes
 FAIL
 run 'tests/03_non_portable_realloc' to see what went wrong
 run 'tests/03_non_portable_realloc -d' with a debugger
+Running test 03_static_object_leaked...              
+leaked 4000 bytes
+FAIL
+run 'tests/03_static_object_leaked' to see what went wrong
+run 'tests/03_static_object_leaked -d' with a debugger
+Running test 03_static_object_non_leaked...          PASS
 Running test 04_budget_allocations...                PASS
 Running test 04_budget_allocations_debug...          PASS
 Running test 05_byte_budget_allocations...           PASS
@@ -81,17 +169,17 @@ Running test 05_byte_budget_allocations_debug...     PASS
 Running test 06_scheduled_failures...                PASS
 Running test 06_scheduled_failures_debug...          PASS
 Running test 07_calloc_reallocarray_failures...      PASS
-Running test 08_fopen_leak...                        
+Running test 08_fopen_leak...
 FAIL
 run 'tests/08_fopen_leak' to see what went wrong
 run 'tests/08_fopen_leak -d' with a debugger
 Running test 08_stdlib_functions...                  PASS
-Running test 08_strdup_leak...                       
+Running test 08_strdup_leak...
 leaked 8 bytes
 FAIL
 run 'tests/08_strdup_leak' to see what went wrong
 run 'tests/08_strdup_leak -d' with a debugger
-Running test 08_tmpfile_leak...                      
+Running test 08_tmpfile_leak...
 FAIL
 run 'tests/08_tmpfile_leak' to see what went wrong
 run 'tests/08_tmpfile_leak -d' with a debugger

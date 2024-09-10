@@ -9,7 +9,7 @@ TEST (compile) {
 
 
 TEST (invalid_free) {
-    double_free ();
+    non_malloc_free ();
     TEST_PASSED;
 }
 

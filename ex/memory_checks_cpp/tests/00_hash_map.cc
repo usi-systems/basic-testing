@@ -1,5 +1,5 @@
 #include "basic_testing.h"
-#include <string.h>
+#include <cstddef>
 
 
 
@@ -29,6 +29,7 @@ TEST (map_insert) {
     struct bt_mem_node * ins_node = bt_mem_table_insert (&i);
     CHECK (ins_node != NULL);
     ins_node->size = 12;
+    ins_node->allocator = bt_allocator::MALLOC;
 
     struct bt_mem_node * node = bt_mem_table_find (&i);
     CHECK (node != NULL);
@@ -50,6 +51,7 @@ TEST (map_update) {
     struct bt_mem_node * ins_node = bt_mem_table_insert (&i);
     CHECK (ins_node != NULL);
     ins_node->size = 12;
+    ins_node->allocator = bt_allocator::MALLOC;
 
     struct bt_mem_node * node = bt_mem_table_find (&i);
     CHECK (node != NULL);
@@ -60,6 +62,7 @@ TEST (map_update) {
     size_t capacity = bt_mem_table_capacity;
 
     ins_node = bt_mem_table_insert (&i);
+    ins_node->allocator = bt_allocator::NEW;
     ins_node->size = 15;
     CHECK (node != NULL);
     CHECK_CMP (node->size,==,15);
@@ -85,6 +88,7 @@ TEST (map_insert_collisions) {
     for (size_t i = 0; i < len; ++i) {
 	struct bt_mem_node * node = bt_mem_table_insert (items + i);
 	CHECK(node != NULL);
+	node->allocator = bt_allocator::MALLOC;
 	node->size = items[i];
     }
 
@@ -92,6 +96,7 @@ TEST (map_insert_collisions) {
 	const struct bt_mem_node * node = bt_mem_table_find (items + i);
 	CHECK (node != NULL);
 	CHECK_CMP (node->size,==,items[i]);
+	CHECK_CMP (node->allocator,==,bt_allocator::MALLOC);
 	CHECK (items + i == node->address);
     }
     CHECK (bt_mem_table_size == len);
@@ -115,6 +120,7 @@ TEST (map_update_collisions) {
     for (size_t i = 0; i < len; ++i) {
 	struct bt_mem_node * node = bt_mem_table_insert (items + i);
 	CHECK(node != NULL);
+	node->allocator = bt_allocator::MALLOC;
 	node->size = items[i];
     }
 
@@ -122,6 +128,7 @@ TEST (map_update_collisions) {
 	const struct bt_mem_node * node = bt_mem_table_find (items + i);
 	CHECK (node != NULL);
 	CHECK_CMP (node->size,==,items[i]);
+	CHECK_CMP (node->allocator,==,bt_allocator::MALLOC);
 	CHECK (items + i == node->address);
     }
     CHECK (bt_mem_table_size == len);
@@ -134,6 +141,7 @@ TEST (map_update_collisions) {
     for (size_t i = 0; i < len; ++i) {
 	struct bt_mem_node * node = bt_mem_table_insert (items + i);
 	CHECK(node != NULL);
+	node->allocator = bt_allocator::NEW;
 	node->size = items[i];
     }
 
@@ -141,6 +149,7 @@ TEST (map_update_collisions) {
 	const struct bt_mem_node * node = bt_mem_table_find (items + i);
 	CHECK (node != NULL);
 	CHECK_CMP (node->size,==,items[i]);
+	CHECK_CMP (node->allocator,==,bt_allocator::NEW);
 	CHECK (items + i == node->address);
     }
     CHECK (bt_mem_table_size == len);
@@ -162,6 +171,7 @@ TEST (map_free) {
 	struct bt_mem_node * node = bt_mem_table_insert (items + i);
 	CHECK (node != NULL);
 	node->size = 10;
+	node->allocator = bt_allocator::MALLOC;
     }
 
     bt_mem_table_free ();
@@ -179,6 +189,7 @@ TEST (map_remove) {
     struct bt_mem_node * node = bt_mem_table_insert (&x);
     CHECK (node != NULL);
     node->size = 10;
+    node->allocator = bt_allocator::MALLOC;
     CHECK (bt_mem_table_remove (&x));
     CHECK (bt_mem_table_find (&x) == NULL);
     bt_mem_table_free ();
@@ -204,6 +215,7 @@ TEST (map_remove_collisions) {
 	struct bt_mem_node * node = bt_mem_table_insert (items + i);
 	CHECK (node != NULL);
 	node->size = 10;
+	node->allocator = bt_allocator::MALLOC;
     }
 
     CHECK (bt_mem_table_size == len);
@@ -232,6 +244,7 @@ TEST (map_remove_collisions_not_found) {
 	struct bt_mem_node * node = bt_mem_table_insert (items + i);
 	CHECK (node != NULL);
 	node->size = 10;
+	node->allocator = bt_allocator::MALLOC;
     }
 
     CHECK (!bt_mem_table_remove (&x));
@@ -252,6 +265,7 @@ TEST (map_insert_remove_series) {
 	struct bt_mem_node * node = bt_mem_table_insert (items + i);
 	CHECK (node != NULL);
 	node->size = items[i];
+	node->allocator = bt_allocator::MALLOC;
     }
 
     for (size_t i = 0; i < len/2; ++i) {
@@ -274,6 +288,7 @@ TEST (map_insert_remove_series) {
 	struct bt_mem_node * node = bt_mem_table_insert (items + i);
 	CHECK (node != NULL);
 	node->size = items[i];
+	node->allocator = bt_allocator::MALLOC;
     }
 
     for (size_t i = len/2; i < len; ++i) {
@@ -298,16 +313,4 @@ TEST (map_insert_remove_series) {
 
 
 
-MAIN_TEST_DRIVER (compile,
-		  map_init,
-		  map_find_empty,
-		  map_insert,
-		  map_update,
-		  map_insert_collisions,
-		  map_update_collisions,
-		  map_free,
-		  map_remove,
-		  map_remove_not_found,
-		  map_remove_collisions,
-		  map_remove_collisions_not_found,
-		  map_insert_remove_series);
+MAIN_TEST_DRIVER ();

@@ -8,10 +8,12 @@ TEST (compile) {
 }
 
 
-TEST (invalid_free) {
-    double_free ();
+TEST (static_object_ptr) {
+    populate_static_vector_ptr ();
     TEST_PASSED;
 }
 
 
-MAIN_TEST_DRIVER (compile, invalid_free);
+
+
+MAIN_TEST_DRIVER ();

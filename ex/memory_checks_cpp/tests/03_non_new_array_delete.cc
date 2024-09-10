@@ -8,10 +8,10 @@ TEST (compile) {
 }
 
 
-TEST (invalid_free) {
-    double_free ();
+TEST (invalid_delete) {
+    non_new_array_delete ();
     TEST_PASSED;
 }
 
 
-MAIN_TEST_DRIVER (compile, invalid_free);
+MAIN_TEST_DRIVER (compile, invalid_delete);
