@@ -191,7 +191,7 @@ BT_WRAP_FLAGS := $(foreach S,$(BT_WRAPPED_SYMBOLS),-Wl,--wrap=$(S))
 # we must assume there are some C++ sources, so we must link with $(CXX)
 #
 $(TESTS_DIR)/%: $(TESTS_DIR)/%.o $(OBJECTS)
-	$(CXX) $(CXXFLAGS) $(LDFLAGS) $(BT_WRAP_FLAGS) $(TESTS_DIR)/$*.o $(OBJECTS) -o $@
+	$(CXX) $(CXXFLAGS) $(LDFLAGS) $(TESTS_DIR)/$*.o $(OBJECTS) -o $@
 
 .PHONY: check-bin
 check-bin: $(TESTS_BIN)
