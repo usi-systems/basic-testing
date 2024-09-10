@@ -80,7 +80,7 @@ void double_free (void) {
 
 void non_malloc_free (void) {
     int a = 10;
-    int * p;
+    int * p = NULL;
     if (a < 20) p = &a;
     free (p);
 }

@@ -154,7 +154,7 @@ void * realloc_zero_size (void * ptr) {
 
 void new_object_free (void) {
     int a = 10;
-    int * p;
+    int * p = nullptr;
     if (a < 20)
 	p = new int{10};
     std::free (p);
@@ -162,7 +162,7 @@ void new_object_free (void) {
 
 void new_array_object_free (void) {
     int a = 10;
-    int * p;
+    int * p = nullptr;
     if (a < 20)
 	p = new int[10];
     std::free(p);
@@ -170,7 +170,7 @@ void new_array_object_free (void) {
 
 void malloc_object_delete (void) {
     int a = 10;
-    int * p;
+    int * p = nullptr;
     if (a < 20)
 	p = (int *) std::malloc (sizeof(int));
     delete p;
@@ -178,7 +178,7 @@ void malloc_object_delete (void) {
 
 void new_array_object_delete (void) {
     int a = 10;
-    int * p;
+    int * p = nullptr;
     if (a < 20)
 	p = new int[10];
     delete p;
@@ -186,7 +186,7 @@ void new_array_object_delete (void) {
 
 void malloc_object_delete_array (void) {
     int a = 10;
-    int * p;
+    int * p = nullptr;
     if (a < 20)
 	p = (int *) std::malloc (sizeof(int));
     delete[] p;
