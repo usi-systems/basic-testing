@@ -186,11 +186,10 @@ check-io-sh: compile $(TESTS_IO) $(TESTS_SH) $(PROGRAMS_DRIVERS)
 
 LDFLAGS += -ldl
 
-$(TESTS_DIR)/%: $(TESTS_DIR)/%.c $(OBJECTS)
-	$(CC) $(CFLAGS) $(LDFLAGS) $(TESTS_DIR)/$*.c $(OBJECTS) -o $@
-
-$(TESTS_DIR)/%: $(TESTS_DIR)/%.cc $(OBJECTS)
-	$(CXX) -std=c++11 $(CXXFLAGS) $(LDFLAGS) $(TESTS_DIR)/$*.cc $(OBJECTS) -o $@
+# we must assume there are some C++ sources, so we must link with $(CXX)
+#
+$(TESTS_DIR)/%: $(TESTS_DIR)/%.o $(OBJECTS)
+	$(CXX) $(CXXFLAGS) $(LDFLAGS) $(TESTS_DIR)/$*.o $(OBJECTS) -o $@
 
 .PHONY: check-bin
 check-bin: $(TESTS_BIN)
