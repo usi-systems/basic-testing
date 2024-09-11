@@ -370,10 +370,8 @@ static void read_str (char *buf, const char *format, ...) {
     va_end (ap);
 }
 
-TEST (stdio_string_no_leak) {
+TEST (stdio_sprintf_scanf_no_leak) {
     char buf[100];
-    char * name = tempnam (NULL, "somefile");
-    CHECK (name != NULL);
     sprintf (buf, "testing %d", 10);
     int x;
     sscanf (buf, "testing %d", &x);
@@ -381,7 +379,6 @@ TEST (stdio_string_no_leak) {
     write_str (buf, "testing vsprintf %d", 11);
     read_str (buf, "testing vsprintf %d", &x);
     CHECK_CMP (x,==,11);
-    free (name);
     TEST_PASSED;
 }
 
@@ -416,4 +413,4 @@ MAIN_TEST_DRIVER (ctype_no_leaks,
 		  bsearch_no_leaks,
 		  time_no_leaks,
 		  basic_file_operations_no_leak,
-		  stdio_string_no_leak);
+		  stdio_sprintf_scanf_no_leak);

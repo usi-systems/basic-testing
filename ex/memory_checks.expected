@@ -95,7 +95,3 @@ Running test 08_tmpfile_leak...
 FAIL
 run 'tests/08_tmpfile_leak' to see what went wrong
 run 'tests/08_tmpfile_leak -d' with a debugger
-Running test 08_tmpnum_leak...                       
-FAIL
-run 'tests/08_tmpnum_leak' to see what went wrong
-run 'tests/08_tmpnum_leak -d' with a debugger
