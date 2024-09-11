@@ -60,7 +60,7 @@ int array_append_reallocarray (struct array * array, int element) {
     if (array->len == array->cap) {
 	size_t new_cap = array->cap ? 2*array->cap : initial_cap;
 
-	int * new_data = reallocarray(array->data, new_cap, sizeof(int));
+	int * new_data = wrapped_reallocarray (array->data, new_cap, sizeof(int));
 	if (!new_data) return 0;
 
 	array->data = new_data;
@@ -69,6 +69,17 @@ int array_append_reallocarray (struct array * array, int element) {
 
     array->data[array->len++] = element;
     return 1;
+}
+
+void * wrapped_reallocarray (void * ptr, size_t nmemb, size_t size) {
+#ifdef __APPLE__
+    if (nmemb == 0 || size == 0 || SIZE_MAX / nmemb <= size)
+	return NULL;
+
+    return realloc (ptr, nmemb*size);
+#else
+    return reallocarray (ptr, nmemb, size);
+#endif
 }
 
 void double_free (void) {
@@ -80,7 +91,7 @@ void double_free (void) {
 
 void non_malloc_free (void) {
     int a = 10;
-    int * p;
+    int * p = NULL;
     if (a < 20) p = &a;
     free (p);
 }

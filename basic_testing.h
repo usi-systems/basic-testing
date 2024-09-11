@@ -862,6 +862,49 @@ void * calloc (size_t nmemb, size_t size) {
     return p;
 }
 
+#ifdef __APPLE__
+BT_POSSIBLY_UNUSED
+void * valloc (size_t size) {
+    static void *(*libc_valloc)(size_t) = NULL;
+
+    if (!libc_valloc)
+	libc_valloc = (void *(*)(size_t)) dlsym(RTLD_NEXT, "valloc");
+
+    return malloc (size);
+}
+
+BT_POSSIBLY_UNUSED
+void * aligned_alloc (size_t aligned, size_t size) {
+    static void *(*libc_aligned_alloc)(size_t, size_t) = NULL;
+
+    if (!libc_aligned_alloc)
+	libc_aligned_alloc = (void *(*)(size_t, size_t)) dlsym(RTLD_NEXT, "aligned_alloc");
+
+    return malloc (size);
+}
+
+BT_POSSIBLY_UNUSED
+void * reallocf (void * ptr, size_t size) {
+    static void *(*libc_reallocf)(void *, size_t) = NULL;
+
+    if (!libc_reallocf)
+	libc_reallocf = (void *(*)(void *, size_t)) dlsym(RTLD_NEXT, "reallocf");
+
+    void * ret = realloc (ptr, size);
+    if (!ret) free (ptr);
+    return ret;
+}
+
+BT_POSSIBLY_UNUSED
+char * strdup (const char * s) {
+    size_t len = strlen (s);
+    char * ret = (char *) malloc (len + 1);
+    if (ret) strcpy (ret, s);
+    return ret;
+}
+#endif
+
+#ifndef __APPLE__
 BT_POSSIBLY_UNUSED
 void * reallocarray (void * ptr, size_t nmemb, size_t size) {
     static void *(*libc_reallocarray)(void *, size_t, size_t) = NULL;
@@ -876,6 +919,20 @@ void * reallocarray (void * ptr, size_t nmemb, size_t size) {
 	return NULL;
     size_t len = nmemb * size;
     return realloc (ptr, len);
+}
+#endif
+
+BT_POSSIBLY_UNUSED
+void qsort (void * base, size_t nmemb, size_t size, int (*compar)(const void *, const void *)) {
+    static void (*libc_qsort)(void * base, size_t nmemb, size_t size, int (*compar)(const void *, const void *)) = NULL;
+
+    if (!libc_qsort)
+	libc_qsort = (void (*)(void *, size_t, size_t, int (*)(const void *, const void *))) dlsym(RTLD_NEXT, "qsort");
+
+    int prev_bt_mem_checks_disabled = bt_mem_checks_disabled;
+    bt_mem_checks_disabled = 1;
+    libc_qsort(base, nmemb, size, compar);
+    bt_mem_checks_disabled = prev_bt_mem_checks_disabled;
 }
 
 BT_POSSIBLY_UNUSED
@@ -1040,8 +1097,6 @@ char * ctime (const time_t * tp) {
     return result;
 }
 
-
-    
 #ifdef __cplusplus
 }
 #endif

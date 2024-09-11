@@ -1,10 +1,12 @@
 .PHONY: all
 all: all-examples
 
+FAIL_FAST ?= no
 EXAMPLES = ex/example1 ex/example2 ex/example3 ex/example4 \
 	ex/example5 ex/example6 ex/example7 ex/example8 ex/memory_checks ex/memory_checks_cpp \
 	'ex ws/example1 ws' 'ex ws/example2 ws' 'ex ws/example3 ws' 'ex ws/example4 ws' \
 	'ex ws/example5 ws' 'ex ws/example6 ws' 'ex ws/example7 ws' 'ex ws/example8 ws'
+PARALLELISM ?= 1
 
 .PHONY: all-examples
 all-examples:
@@ -12,7 +14,7 @@ all-examples:
 	do test_result=PASS; \
 	   cp -a basic_testing.h "$$ex"/tests ;\
 	   $(MAKE) -C "$$ex" clean > /dev/null || test_result=FAIL; \
-	   $(MAKE) -C "$$ex" TEST_COLORS=no > "$$ex".out 2>&1 || test_result=FAIL ; \
+	   $(MAKE) -C "$$ex" -j $(PARALLELISM) TEST_COLORS=no > "$$ex".out 2>&1 || test_result=FAIL ; \
 	   if test -r "$$ex".expected; \
 	   	then { IFS=''; while read l; \
 	   	        do if grep -Fq "$$l" "$$ex".out; \
@@ -27,6 +29,9 @@ all-examples:
 	        rm -f "$$ex".out; \
 	   else echo  "$$ex FAIL" ; \
 	        echo "check '$$ex.out' and '$$ex.expected' to see what went wrong"; \
+		if [ "$(FAIL_FAST)" = "yes" ]; \
+		then exit 1; \
+		fi; \
 	   fi; \
 	done
 

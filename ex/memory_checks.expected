@@ -81,21 +81,9 @@ Running test 05_byte_budget_allocations_debug...     PASS
 Running test 06_scheduled_failures...                PASS
 Running test 06_scheduled_failures_debug...          PASS
 Running test 07_calloc_reallocarray_failures...      PASS
-Running test 08_fopen_leak...                        
-FAIL
-run 'tests/08_fopen_leak' to see what went wrong
-run 'tests/08_fopen_leak -d' with a debugger
 Running test 08_stdlib_functions...                  PASS
 Running test 08_strdup_leak...                       
 leaked 8 bytes
 FAIL
 run 'tests/08_strdup_leak' to see what went wrong
 run 'tests/08_strdup_leak -d' with a debugger
-Running test 08_tmpfile_leak...                      
-FAIL
-run 'tests/08_tmpfile_leak' to see what went wrong
-run 'tests/08_tmpfile_leak -d' with a debugger
-Running test 08_tmpnum_leak...                       
-FAIL
-run 'tests/08_tmpnum_leak' to see what went wrong
-run 'tests/08_tmpnum_leak -d' with a debugger

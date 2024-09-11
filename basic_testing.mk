@@ -3,8 +3,8 @@
 # and/or
 # PROGRAMS=
 
-CFLAGS=-Wall -Werror -g $(COVERAGE_FLAGS)
-CXXFLAGS=-Wall -Werror -g $(COVERAGE_FLAGS)
+CFLAGS=-D_GNU_SOURCE -Wall -Werror -g $(COVERAGE_FLAGS)
+CXXFLAGS=-D_GNU_SOURCE -Wall -Werror -std=c++11 -g $(COVERAGE_FLAGS)
 
 COVERAGE_FLAGS=$(if $(WITH_COVERAGE),--coverage,)
 SHELL=/bin/bash
@@ -183,10 +183,6 @@ check-io-sh: compile $(TESTS_IO) $(TESTS_SH) $(PROGRAMS_DRIVERS)
 	done; \
 	done; \
 	test_summary 'Summary: PASS '
-
-BT_WRAPPED_SYMBOLS := malloc free realloc calloc reallocarray \
-			_Znwm _Znam _ZdlPvm _ZdaPv
-BT_WRAP_FLAGS := $(foreach S,$(BT_WRAPPED_SYMBOLS),-Wl,--wrap=$(S))
 
 # we must assume there are some C++ sources, so we must link with $(CXX)
 #

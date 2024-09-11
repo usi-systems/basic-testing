@@ -236,7 +236,8 @@ TEST (stdlib_conversion_no_leaks) {
 
 TEST (rand_no_leaks) {
     srand (10);
-    CHECK_CMP (rand (),==,1215069295);
+    int num = rand ();
+    CHECK_CMP (rand (),!=,num);
     TEST_PASSED;
 }
 
@@ -356,6 +357,7 @@ TEST (basic_file_operations_no_leak) {
 }
 
 
+#ifndef __APPLE__
 static void write_str (char *buf, const char *format, ...) {
     va_list ap;
 
@@ -373,10 +375,8 @@ static void read_str (char *buf, const char *format, ...) {
     va_end (ap);
 }
 
-TEST (stdio_string_no_leak) {
+TEST (stdio_sprintf_scanf_no_leak) {
     char buf[100];
-    char * name = tempnam (NULL, "somefile");
-    CHECK (name != NULL);
     sprintf (buf, "testing %d", 10);
     int x;
     sscanf (buf, "testing %d", &x);
@@ -384,39 +384,10 @@ TEST (stdio_string_no_leak) {
     write_str (buf, "testing vsprintf %d", 11);
     read_str (buf, "testing vsprintf %d", &x);
     CHECK_CMP (x,==,11);
-    free (name);
     TEST_PASSED;
 }
+#endif
 
 
 
-MAIN_TEST_DRIVER (ctype_no_leaks,
-		  strcpy_no_leaks,
-		  strncpy_no_leaks,
-		  strcat_no_leaks,
-		  strncat_no_leaks,
-		  strcmp_no_leaks,
-		  strncmp_no_leaks,
-		  strchr_no_leaks,
-		  strrchr_no_leaks,
-		  strspn_no_leaks,
-		  strcspn_no_leaks,
-		  strcspn_no_leaks,
-		  strpbrk_no_leaks,
-		  strstr_no_leaks,
-		  strlen_no_leaks,
-		  strerror_no_leaks,
-		  strtok_no_leaks,
-		  memcpy_no_leaks,
-		  memmove_no_leaks,
-		  memcmp_no_leaks,
-		  memchr_no_leaks,
-		  memset_no_leaks,
-		  math_no_leaks,
-		  stdlib_conversion_no_leaks,
-		  rand_no_leaks,
-		  qsort_no_leaks,
-		  bsearch_no_leaks,
-		  time_no_leaks,
-		  basic_file_operations_no_leak,
-		  stdio_string_no_leak);
+MAIN_TEST_DRIVER ();

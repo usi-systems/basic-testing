@@ -63,7 +63,7 @@ int array_append_reallocarray (struct array * array, int element) {
     if (array->len == array->cap) {
 	size_t new_cap = array->cap ? 2*array->cap : initial_cap;
 
-	int * new_data = (int *) reallocarray(array->data, new_cap, sizeof(int));
+	int * new_data = (int *) wrapped_reallocarray (array->data, new_cap, sizeof(int));
 	if (!new_data) return 0;
 
 	array->data = new_data;
@@ -72,6 +72,17 @@ int array_append_reallocarray (struct array * array, int element) {
 
     array->data[array->len++] = element;
     return 1;
+}
+
+void * wrapped_reallocarray (void * ptr, size_t nmemb, size_t size) {
+#ifdef __APPLE__
+    if (nmemb == 0 || size == 0 || SIZE_MAX / nmemb <= size)
+	return NULL;
+
+    return realloc (ptr, nmemb*size);
+#else
+    return reallocarray (ptr, nmemb, size);
+#endif
 }
 
 array_cpp::array_cpp () : data{nullptr}, len{0}, cap{0} {}
@@ -124,21 +135,21 @@ void double_delete_array (void) {
 
 void non_malloc_free (void) {
     int a = 10;
-    int * p;
+    int * p = nullptr;
     if (a < 20) p = &a;
     std::free (p);
 }
 
 void non_new_delete (void) {
     int a = 10;
-    int * p;
+    int * p = nullptr;
     if (a < 20) p = &a;
     delete p;
 }
 
 void non_new_array_delete (void) {
     int a = 10;
-    int * p;
+    int * p = nullptr;
     if (a < 20) p = &a;
     delete[] p;
 
@@ -154,7 +165,7 @@ void * realloc_zero_size (void * ptr) {
 
 void new_object_free (void) {
     int a = 10;
-    int * p;
+    int * p = nullptr;
     if (a < 20)
 	p = new int{10};
     std::free (p);
@@ -162,7 +173,7 @@ void new_object_free (void) {
 
 void new_array_object_free (void) {
     int a = 10;
-    int * p;
+    int * p = nullptr;
     if (a < 20)
 	p = new int[10];
     std::free(p);
@@ -170,7 +181,7 @@ void new_array_object_free (void) {
 
 void malloc_object_delete (void) {
     int a = 10;
-    int * p;
+    int * p = nullptr;
     if (a < 20)
 	p = (int *) std::malloc (sizeof(int));
     delete p;
@@ -178,7 +189,7 @@ void malloc_object_delete (void) {
 
 void new_array_object_delete (void) {
     int a = 10;
-    int * p;
+    int * p = nullptr;
     if (a < 20)
 	p = new int[10];
     delete p;
@@ -186,7 +197,7 @@ void new_array_object_delete (void) {
 
 void malloc_object_delete_array (void) {
     int a = 10;
-    int * p;
+    int * p = nullptr;
     if (a < 20)
 	p = (int *) std::malloc (sizeof(int));
     delete[] p;
@@ -194,7 +205,7 @@ void malloc_object_delete_array (void) {
 
 void new_object_delete_array (void) {
     int a = 10;
-    int * p;
+    int * p = nullptr;
     if (a < 20)
 	p = new int {10};
     delete[] p;
