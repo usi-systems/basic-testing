@@ -60,7 +60,11 @@ int array_append_reallocarray (struct array * array, int element) {
     if (array->len == array->cap) {
 	size_t new_cap = array->cap ? 2*array->cap : initial_cap;
 
-	int * new_data = reallocarray(array->data, new_cap, sizeof(int));
+#ifdef __APPLE__
+	int * new_data = realloc (array->data, new_cap*sizeof(int));
+#else
+	int * new_data = reallocarray (array->data, new_cap, sizeof(int));
+#endif
 	if (!new_data) return 0;
 
 	array->data = new_data;

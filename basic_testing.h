@@ -862,6 +862,7 @@ void * calloc (size_t nmemb, size_t size) {
     return p;
 }
 
+#ifndef __APPLE__
 BT_POSSIBLY_UNUSED
 void * reallocarray (void * ptr, size_t nmemb, size_t size) {
     static void *(*libc_reallocarray)(void *, size_t, size_t) = NULL;
@@ -877,6 +878,7 @@ void * reallocarray (void * ptr, size_t nmemb, size_t size) {
     size_t len = nmemb * size;
     return realloc (ptr, len);
 }
+#endif
 
 BT_POSSIBLY_UNUSED
 void qsort (void * base, size_t nmemb, size_t size, int (*compar)(const void *, const void *)) {
