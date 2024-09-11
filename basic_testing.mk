@@ -4,7 +4,7 @@
 # PROGRAMS=
 
 CFLAGS=-D_GNU_SOURCE -Wall -Werror -g $(COVERAGE_FLAGS)
-CXXFLAGS=-D_GNU_SOURCE -Wall -Werror -g $(COVERAGE_FLAGS)
+CXXFLAGS=-D_GNU_SOURCE -Wall -Werror -std=c++11 -g $(COVERAGE_FLAGS)
 
 COVERAGE_FLAGS=$(if $(WITH_COVERAGE),--coverage,)
 SHELL=/bin/bash
