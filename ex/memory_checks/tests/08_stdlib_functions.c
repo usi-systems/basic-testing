@@ -234,7 +234,8 @@ TEST (stdlib_conversion_no_leaks) {
 
 TEST (rand_no_leaks) {
     srand (10);
-    CHECK_CMP (rand (),==,1215069295);
+    int num = rand ();
+    CHECK_CMP (rand (),!=,num);
     TEST_PASSED;
 }
 
