@@ -10,13 +10,11 @@ PARALLELISM ?= 1
 
 .PHONY: all-examples
 all-examples:
-	@$(CC) --version
 	@for ex in $(EXAMPLES); \
 	do test_result=PASS; \
 	   cp -a basic_testing.h "$$ex"/tests ;\
 	   $(MAKE) -C "$$ex" clean > /dev/null || test_result=FAIL; \
 	   $(MAKE) -C "$$ex" -j $(PARALLELISM) TEST_COLORS=no > "$$ex".out || test_result=FAIL ; \
-	   cat "$$ex".out ; \
 	   if test -r "$$ex".expected; \
 	   	then { IFS=''; while read l; \
 	   	        do if grep -Fq "$$l" "$$ex".out; \

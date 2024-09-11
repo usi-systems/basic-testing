@@ -19,10 +19,6 @@
 #ifndef BASIC_TESTING_H_INCLUDED
 #define BASIC_TESTING_H_INCLUDED
 
-#ifndef _GNU_SOURCE
-#define _GNU_SOURCE
-#endif
-
 #include <stdarg.h>
 #include <stdalign.h>
 #include <stddef.h>
@@ -883,6 +879,19 @@ void * reallocarray (void * ptr, size_t nmemb, size_t size) {
 }
 
 BT_POSSIBLY_UNUSED
+void qsort (void * base, size_t nmemb, size_t size, int (*compar)(const void *, const void *)) {
+    static void (*libc_qsort)(void * base, size_t nmemb, size_t size, int (*compar)(const void *, const void *)) = NULL;
+
+    if (!libc_qsort)
+	libc_qsort = (void (*)(void *, size_t, size_t, int (*)(const void *, const void *))) dlsym(RTLD_NEXT, "qsort");
+
+    int prev_bt_mem_checks_disabled = bt_mem_checks_disabled;
+    bt_mem_checks_disabled = 1;
+    libc_qsort(base, nmemb, size, compar);
+    bt_mem_checks_disabled = prev_bt_mem_checks_disabled;
+}
+
+BT_POSSIBLY_UNUSED
 int vfprintf (FILE * stream, const char * format, va_list ap) {
     static int (*libc_vfprintf)(FILE *, const char *, va_list) = NULL;
 
@@ -1044,8 +1053,6 @@ char * ctime (const time_t * tp) {
     return result;
 }
 
-
-    
 #ifdef __cplusplus
 }
 #endif

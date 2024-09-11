@@ -3,9 +3,8 @@
 # and/or
 # PROGRAMS=
 
-CFLAGS=-Wall -Werror -g $(COVERAGE_FLAGS)
-CXXFLAGS=-Wall -Werror -g $(COVERAGE_FLAGS)
-LDFLAGS += -ldl
+CFLAGS=-D_GNU_SOURCE -Wall -Werror -g $(COVERAGE_FLAGS)
+CXXFLAGS=-D_GNU_SOURCE -Wall -Werror -g $(COVERAGE_FLAGS)
 
 COVERAGE_FLAGS=$(if $(WITH_COVERAGE),--coverage,)
 SHELL=/bin/bash
@@ -184,8 +183,6 @@ check-io-sh: compile $(TESTS_IO) $(TESTS_SH) $(PROGRAMS_DRIVERS)
 	done; \
 	done; \
 	test_summary 'Summary: PASS '
-
-LDFLAGS += -ldl
 
 # we must assume there are some C++ sources, so we must link with $(CXX)
 #
