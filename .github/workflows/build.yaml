@@ -14,7 +14,7 @@ jobs:
     
     strategy:
       matrix:
-        os: [macos-14, ubuntu-22.04, ubuntu-24.04]
+        os: [macos-13, macos-14, ubuntu-22.04, ubuntu-24.04]
         compiler_suite: [clang, gcc]
 
     steps:

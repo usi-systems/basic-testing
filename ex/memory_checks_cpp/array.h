@@ -19,6 +19,8 @@ int array_element(struct array * array, size_t index);
 int array_append(struct array * array, int value);
 int array_append_reallocarray(struct array * array, int value);
 
+void * wrapped_reallocarray (void * ptr, size_t nmemb, size_t size);
+
 class array_cpp {    
 public:
     array_cpp ();
