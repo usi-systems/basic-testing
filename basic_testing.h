@@ -888,10 +888,18 @@ void * reallocf (void * ptr, size_t size) {
     static void *(*libc_reallocf)(void *, size_t) = NULL;
 
     if (!libc_reallocf)
-	libc_reallocf = (void *(*)(size_t, size_t)) dlsym(RTLD_NEXT, "reallocf");
+	libc_reallocf = (void *(*)(void *, size_t)) dlsym(RTLD_NEXT, "reallocf");
 
     void * ret = realloc (ptr, size);
     if (!ret) free (ptr);
+    return ret;
+}
+
+BT_POSSIBLY_UNUSED
+char * strdup (const char * s) {
+    size_t len = strlen (s);
+    char * ret = (char *) malloc (len + 1);
+    if (ret) strcpy (ret, s);
     return ret;
 }
 #endif
