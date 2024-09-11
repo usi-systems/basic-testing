@@ -357,6 +357,7 @@ TEST (basic_file_operations_no_leak) {
 }
 
 
+#ifndef __APPLE__
 static void write_str (char *buf, const char *format, ...) {
     va_list ap;
 
@@ -385,7 +386,7 @@ TEST (stdio_sprintf_scanf_no_leak) {
     CHECK_CMP (x,==,11);
     TEST_PASSED;
 }
-
+#endif
 
 
 

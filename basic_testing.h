@@ -862,6 +862,40 @@ void * calloc (size_t nmemb, size_t size) {
     return p;
 }
 
+#ifdef __APPLE__
+BT_POSSIBLY_UNUSED
+void * valloc (size_t size) {
+    static void *(*libc_valloc)(size_t) = NULL;
+
+    if (!libc_valloc)
+	libc_valloc = (void *(*)(size_t)) dlsym(RTLD_NEXT, "valloc");
+
+    return malloc (size);
+}
+
+BT_POSSIBLY_UNUSED
+void * aligned_alloc (size_t aligned, size_t size) {
+    static void *(*libc_aligned_alloc)(size_t, size_t) = NULL;
+
+    if (!libc_aligned_alloc)
+	libc_aligned_alloc = (void *(*)(size_t, size_t)) dlsym(RTLD_NEXT, "aligned_alloc");
+
+    return malloc (size);
+}
+
+BT_POSSIBLY_UNUSED
+void * reallocf (void * ptr, size_t size) {
+    static void *(*libc_reallocf)(void *, size_t) = NULL;
+
+    if (!libc_reallocf)
+	libc_reallocf = (void *(*)(size_t, size_t)) dlsym(RTLD_NEXT, "reallocf");
+
+    void * ret = realloc (ptr, size);
+    if (!ret) free (ptr);
+    return ret;
+}
+#endif
+
 #ifndef __APPLE__
 BT_POSSIBLY_UNUSED
 void * reallocarray (void * ptr, size_t nmemb, size_t size) {
