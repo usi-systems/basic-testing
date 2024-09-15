@@ -9,7 +9,7 @@ int main() {
 	if (c == '\n') {
 	    if (i > 10) {
 		i = 0;
-		while (line[i] != 255) {
+		while ((int) line[i] != 255) {
 		    line[i] = *p;
 		    --i;
 		}

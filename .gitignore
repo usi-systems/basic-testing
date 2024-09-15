@@ -1,2 +1,4 @@
 ex/**/basic_testing.h
 ex ws/**/basic_testing.h
+*.o
+*.out
