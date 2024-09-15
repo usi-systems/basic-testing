@@ -381,7 +381,8 @@ static void bt_mem_fail_all (void) {
    exceeded, any allocation function will fail.  A call to `free' will
    count as -1.
  */
-void bt_mem_set_allocation_budget (size_t budget) {
+BT_POSSIBLY_UNUSED
+static void bt_mem_change_allocation_budget (size_t budget) {
     if (!bt_mem_budget_enabled)
 	bt_mem_budget_curr = budget;
     else if (bt_mem_budget == budget)
@@ -397,6 +398,20 @@ void bt_mem_set_allocation_budget (size_t budget) {
     bt_mem_budget = budget;
 }
 
+BT_POSSIBLY_UNUSED
+static void bt_mem_set_allocation_budget (size_t budget) {
+    bt_mem_budget_enabled = 0;
+    bt_mem_change_allocation_budget (budget);
+}
+
+#define MEM_CHANGE_ALLOCATION_BUDGET(B) do {	\
+    if (bt_mem_checks_disabled) {		\
+        TEST_SKIPPED;				\
+    } else {					\
+        bt_mem_change_allocation_budget (B);	\
+    }						\
+} while (0)
+
 #define MEM_SET_ALLOCATION_BUDGET(B) do {	\
     if (bt_mem_checks_disabled) {		\
         TEST_SKIPPED;				\
@@ -410,7 +425,8 @@ void bt_mem_set_allocation_budget (size_t budget) {
    Calling `free(p)' will discount the amount of memory previously
    allocated with pointer `p'.
  */
-void bt_mem_set_bytes_budget (size_t budget) {
+BT_POSSIBLY_UNUSED
+static void bt_mem_change_bytes_budget (size_t budget) {
     if (!bt_mem_bytes_budget_enabled)
 	bt_mem_bytes_budget_curr = budget;
     else if (bt_mem_bytes_budget == budget)
@@ -427,6 +443,12 @@ void bt_mem_set_bytes_budget (size_t budget) {
     bt_mem_bytes_budget = budget;
 }
 
+BT_POSSIBLY_UNUSED
+static void bt_mem_set_bytes_budget (size_t budget) {
+    bt_mem_bytes_budget_enabled = 0;
+    bt_mem_change_bytes_budget (budget);
+}
+
 #define MEM_SET_BYTES_BUDGET(B) do {	\
     if (bt_mem_checks_disabled) {	\
         TEST_SKIPPED;			\
@@ -435,11 +457,20 @@ void bt_mem_set_bytes_budget (size_t budget) {
     }					\
 } while (0)
 
+#define MEM_CHANGE_BYTES_BUDGET(B) do {	\
+    if (bt_mem_checks_disabled) {	\
+        TEST_SKIPPED;			\
+    } else {				\
+        bt_mem_change_bytes_budget (B);	\
+    }					\
+} while (0)
+
 /* Completely reset the instrumentation of the memory allocation
    functions.  Failures are reset, and invocations and bytes
    budgets are also canceled.
  */
-void bt_mem_reset_allocator (void) {
+BT_POSSIBLY_UNUSED
+static void bt_mem_reset_allocator (void) {
     bt_mem_table_failed = 0;
     bt_mem_bytes_budget_enabled = 0;
     bt_mem_budget_enabled = 0;

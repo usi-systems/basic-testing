@@ -202,6 +202,74 @@ TEST (realloc_budget_reset) {
 }
 
 
+TEST (change_same_budget) {
+    MEM_SET_ALLOCATION_BUDGET (1);
+    struct array * array = array_new ();
+    CHECK (array != NULL);
+    for (int i = 0; i < 8; ++i)
+	CHECK (!array_append (array, i));
+    MEM_CHANGE_ALLOCATION_BUDGET (1);
+    for (int i = 0; i < 8; ++i)
+	CHECK (!array_append (array, i));
+    array_free (array);
+    TEST_PASSED;
+}
+
+
+TEST (change_higher_budget) {
+    MEM_SET_ALLOCATION_BUDGET (1);
+    struct array * array = array_new ();
+    CHECK (array != NULL);
+    for (int i = 0; i < 8; ++i)
+	CHECK (!array_append (array, i));
+    MEM_CHANGE_ALLOCATION_BUDGET (2);
+    for (int i = 0; i < 8; ++i)
+	CHECK (array_append (array, i));
+    for (int i = 8; i < 16; ++i)
+	CHECK (!array_append (array, i));
+    array_free (array);
+    MEM_CHANGE_ALLOCATION_BUDGET (3);
+    array = array_new ();
+    CHECK (array != NULL);
+    for (int i = 0; i < 16; ++i)
+	CHECK (array_append (array, i));
+    array_free (array);
+    TEST_PASSED;
+}
+
+
+TEST (change_lower_budget) {
+    MEM_SET_ALLOCATION_BUDGET (4);
+    struct array * array = array_new ();
+    MEM_CHANGE_ALLOCATION_BUDGET (2);
+    for (int i = 0; i < 8; ++i)
+	CHECK (array_append (array, i));
+    CHECK (!array_append (array, 9));
+    MEM_CHANGE_ALLOCATION_BUDGET (1);
+    for (int i = 8; i < 16; ++i)
+	CHECK (!array_append (array, i));
+    array_free (array);
+    array = array_new ();
+    CHECK (array != NULL);
+    for (int i = 0; i < 8; ++i)
+	CHECK (!array_append (array, i));
+    array_free (array);
+    TEST_PASSED;
+}
+
+
+TEST (change_lower_budget_after_allocations) {
+    MEM_SET_ALLOCATION_BUDGET (3);
+    struct array * array = array_new ();
+    for (int i = 0; i < 8; ++i)
+	CHECK (array_append (array, i));
+    MEM_CHANGE_ALLOCATION_BUDGET (2);
+    CHECK (!array_append (array, 17));
+    array_free (array);
+    TEST_PASSED;
+}
+
+
 TEST (set_same_budget) {
     MEM_SET_ALLOCATION_BUDGET (1);
     struct array * array = array_new ();
@@ -210,7 +278,7 @@ TEST (set_same_budget) {
 	CHECK (!array_append (array, i));
     MEM_SET_ALLOCATION_BUDGET (1);
     for (int i = 0; i < 8; ++i)
-	CHECK (!array_append (array, i));
+	CHECK (array_append (array, i));
     array_free (array);
     TEST_PASSED;
 }
@@ -223,10 +291,8 @@ TEST (set_higher_budget) {
     for (int i = 0; i < 8; ++i)
 	CHECK (!array_append (array, i));
     MEM_SET_ALLOCATION_BUDGET (2);
-    for (int i = 0; i < 8; ++i)
+    for (int i = 0; i < 16; ++i)
 	CHECK (array_append (array, i));
-    for (int i = 8; i < 16; ++i)
-	CHECK (!array_append (array, i));
     array_free (array);
     MEM_SET_ALLOCATION_BUDGET (3);
     array = array_new ();
@@ -241,13 +307,10 @@ TEST (set_higher_budget) {
 TEST (set_lower_budget) {
     MEM_SET_ALLOCATION_BUDGET (4);
     struct array * array = array_new ();
-    MEM_SET_ALLOCATION_BUDGET (2);
+    MEM_SET_ALLOCATION_BUDGET (1);
     for (int i = 0; i < 8; ++i)
 	CHECK (array_append (array, i));
     CHECK (!array_append (array, 9));
-    MEM_SET_ALLOCATION_BUDGET (1);
-    for (int i = 8; i < 16; ++i)
-	CHECK (!array_append (array, i));
     array_free (array);
     array = array_new ();
     CHECK (array != NULL);
@@ -263,8 +326,10 @@ TEST (set_lower_budget_after_allocations) {
     struct array * array = array_new ();
     for (int i = 0; i < 8; ++i)
 	CHECK (array_append (array, i));
-    MEM_SET_ALLOCATION_BUDGET (2);
-    CHECK (!array_append (array, 17));
+    MEM_SET_ALLOCATION_BUDGET (1);
+    for (int i = 8; i < 16; ++i)
+	CHECK (array_append (array, i));
+    CHECK (!array_append (array, 16));
     array_free (array);
     TEST_PASSED;
 }
@@ -328,6 +393,10 @@ MAIN_TEST_DRIVER (compile,
 		 set_higher_budget,
 		 set_lower_budget,
 		 set_lower_budget_after_allocations,
+		 change_same_budget,
+		 change_higher_budget,
+		 change_lower_budget,
+		 change_lower_budget_after_allocations,
 		 zero_budget_calloc,
 		 simple_budget_calloc,
 		 reallocarray_budget);
