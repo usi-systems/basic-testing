@@ -16,4 +16,4 @@ TEST (malloc_zero_size) {
 
 
 
-MAIN_TEST_DRIVER (compile, malloc_zero_size);
+MAIN_TEST_DRIVER ();

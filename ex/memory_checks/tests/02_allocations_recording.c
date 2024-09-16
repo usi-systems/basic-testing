@@ -136,13 +136,4 @@ TEST (reallocarray_map_update) {
 
 
 
-MAIN_TEST_DRIVER (compile,
-		 malloc_add_memory_table,
-		 malloc_fail,
-		 free_table_remove,
-		 realloc_map_insert,
-		 realloc_map_update,
-		 calloc_add_memory_table,
-		 calloc_fail,
-		 reallocarray_map_insert,
-		 reallocarray_map_update);
+MAIN_TEST_DRIVER ();

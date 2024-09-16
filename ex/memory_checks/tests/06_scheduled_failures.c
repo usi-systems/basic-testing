@@ -215,22 +215,4 @@ TEST (reallocarray_failure_reset) {
 
 
 
-MAIN_TEST_DRIVER (compile,
-		 fail_next_malloc_count,
-		 fail_next_malloc_size,
-		 malloc_no_failure,
-		 malloc_failure_reset,
-		 fail_next_realloc_count,
-		 fail_next_realloc_size,
-		 realloc_no_failure,
-		 realloc_failure_reset,
-		 setting_failure,
-		 reset_after_failure,
-		 fail_next_calloc_count,
-		 fail_next_calloc_size,
-		 calloc_no_failure,
-		 calloc_failure_reset,
-		 fail_next_reallocarray_count,
-		 fail_next_realloc_size,
-		 reallocarray_no_failure,
-		 reallocarray_failure_reset);
+MAIN_TEST_DRIVER ();

@@ -17,4 +17,4 @@ TEST (invalid_free) {
 }
 
 
-MAIN_TEST_DRIVER (compile, invalid_free);
+MAIN_TEST_DRIVER ();
