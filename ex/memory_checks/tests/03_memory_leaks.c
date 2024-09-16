@@ -19,4 +19,4 @@ TEST (memory_leak) {
 
 
 
-MAIN_TEST_DRIVER (compile, memory_leak);
+MAIN_TEST_DRIVER ();

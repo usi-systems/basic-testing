@@ -303,22 +303,4 @@ TEST (reallocarray_budget) {
 
 
 
-MAIN_TEST_DRIVER (compile,
-		 no_budget_set,
-		 zero_budget,
-		 reset_after_budget,
-		 simple_budget,
-		 free_increment_budget,
-		 budget_realloc_null,
-		 reset_after_budget_realloc_null,
-		 budget_realloc,
-		 reset_after_budget_realloc,
-		 malloc_budget_reset,
-		 realloc_null_budget_reset,
-		 realloc_budget_reset,
-		 set_higher_budget,
-		 set_lower_budget,
-		 smaller_size_realloc,
-		 zero_budget_calloc,
-		 simple_budget_calloc,
-		 reallocarray_budget);
+MAIN_TEST_DRIVER ();

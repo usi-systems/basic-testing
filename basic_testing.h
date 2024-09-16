@@ -746,22 +746,16 @@ static int bt_add_test(struct bt_test_descriptor * t) {
     return 1;
 }
 
-#ifdef __cplusplus
-#define TEST(test_name)							\
-BT_POSSIBLY_UNUSED static int test_name ## _test ();					\
+#define  TEST(test_name)					\
+BT_POSSIBLY_UNUSED static int test_name ## _test ();		\
 BT_POSSIBLY_UNUSED static struct bt_test_descriptor test_name ## _descr		\
     = { # test_name, test_name ## _test, __FILE__, __LINE__, 0};		\
 BT_POSSIBLY_UNUSED static struct bt_test_descriptor * test_name = & test_name ## _descr; \
-BT_POSSIBLY_UNUSED static const int test_name ## _init = bt_add_test(test_name);	\
+__attribute__((constructor)) static void test_name ## _register (void) { \
+    *bt_last_test_p = test_name;					\
+    bt_last_test_p = &(test_name->next);				\
+}									\
 BT_POSSIBLY_UNUSED static int test_name ## _test ()
-#else
-#define  TEST(test_name)						\
-BT_POSSIBLY_UNUSED static int test_name ## _test ();					\
-BT_POSSIBLY_UNUSED static struct bt_test_descriptor test_name ## _descr		\
-    = { # test_name, test_name ## _test, __FILE__, __LINE__, 0};		\
-BT_POSSIBLY_UNUSED static struct bt_test_descriptor * test_name = & test_name ## _descr; \
-BT_POSSIBLY_UNUSED static int test_name ## _test ()
-#endif
 
 BT_POSSIBLY_UNUSED static unsigned int bt_fail_count = 0;
 BT_POSSIBLY_UNUSED static unsigned int bt_pass_count = 0;
@@ -969,20 +963,9 @@ int bt_test_driver(int argc, char * argv[]) {
     return EXIT_ALL_TESTS_PASSED;
 }
 
-#ifdef __cplusplus
 #define MAIN_TEST_DRIVER(...)						\
     int main(int argc, char * argv[]) {					\
 	return bt_test_driver(argc, argv);				\
     }
-#else
-#define MAIN_TEST_DRIVER(...)						\
-    int main(int argc, char * argv[]) {					\
-	struct bt_test_descriptor * suite [] = { __VA_ARGS__ };		\
-	const unsigned n = sizeof(suite)/sizeof(struct bt_test_descriptor *); \
-	for (unsigned i = 0; i < n; ++i)				\
-	    bt_add_test(suite[i]);					\
-	return bt_test_driver(argc, argv);				\
-    }
-#endif
 
 #endif /* BASIC_TESTING_H_INCLUDED */

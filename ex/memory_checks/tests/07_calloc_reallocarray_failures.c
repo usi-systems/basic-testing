@@ -54,10 +54,4 @@ TEST (reallocarray_zero_size) {
 
 
 
-MAIN_TEST_DRIVER (compile,
-		  overflow_calloc,
-		  calloc_zero_nmemb,
-		  calloc_zero_size,
-		  overflow_reallocarray,
-		  reallocarray_zero_nmemb,
-		  reallocarray_zero_size);
+MAIN_TEST_DRIVER ();
