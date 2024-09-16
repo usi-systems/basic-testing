@@ -963,7 +963,6 @@ int bt_test_driver(int argc, char * argv[]) {
     return EXIT_ALL_TESTS_PASSED;
 }
 
-
 #define MAIN_TEST_DRIVER(...)						\
     int main(int argc, char * argv[]) {					\
 	return bt_test_driver(argc, argv);				\
