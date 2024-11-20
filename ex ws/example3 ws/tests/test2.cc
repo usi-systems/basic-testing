@@ -99,6 +99,7 @@ TEST(large_trim) {
     CHECK_CMP(total_quantity(l), ==, 0);
     CHECK_CMP(total_quantity(l2), ==, 0);
     delete_log(l);
+    delete_log(l2);
     TEST_PASSED;
 }
 

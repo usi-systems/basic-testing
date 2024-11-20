@@ -3,8 +3,8 @@
 # and/or
 # PROGRAMS=
 
-CFLAGS=-Wall -Werror -g $(COVERAGE_FLAGS)
-CXXFLAGS=-Wall -Werror -g $(COVERAGE_FLAGS)
+CFLAGS=-D_GNU_SOURCE -Wall -Werror -g $(COVERAGE_FLAGS)
+CXXFLAGS=-D_GNU_SOURCE -Wall -Werror -std=c++11 -g $(COVERAGE_FLAGS)
 
 COVERAGE_FLAGS=$(if $(WITH_COVERAGE),--coverage,)
 SHELL=/bin/bash
@@ -184,13 +184,10 @@ check-io-sh: compile $(TESTS_IO) $(TESTS_SH) $(PROGRAMS_DRIVERS)
 	done; \
 	test_summary 'Summary: PASS '
 
-BT_LDFLAGS := -Wl,--wrap=malloc,--wrap=free,--wrap=realloc,--wrap=calloc,--wrap=reallocarray
-
-$(TESTS_DIR)/%: $(TESTS_DIR)/%.c $(OBJECTS)
-	$(CC) $(CFLAGS) $(LDFLAGS) $(BT_LDFLAGS) $(TESTS_DIR)/$*.c $(OBJECTS) -o $@
-
-$(TESTS_DIR)/%: $(TESTS_DIR)/%.cc $(OBJECTS)
-	$(CXX) -std=c++11 $(CXXFLAGS) $(LDFLAGS) $(BT_LDFLAGS) $(TESTS_DIR)/$*.cc $(OBJECTS) -o $@
+# we must assume there are some C++ sources, so we must link with $(CXX)
+#
+$(TESTS_DIR)/%: $(TESTS_DIR)/%.o $(OBJECTS)
+	$(CXX) $(CXXFLAGS) $(LDFLAGS) $(TESTS_DIR)/$*.o $(OBJECTS) -o $@
 
 .PHONY: check-bin
 check-bin: $(TESTS_BIN)
