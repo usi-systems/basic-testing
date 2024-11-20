@@ -17,4 +17,4 @@ TEST (debugger) {
 
 
 
-MAIN_TEST_DRIVER (compile, debugger);
+MAIN_TEST_DRIVER ();

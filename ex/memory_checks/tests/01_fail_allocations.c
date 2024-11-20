@@ -395,24 +395,4 @@ TEST (fail_reallocarray_reset) {
 
 
 
-MAIN_TEST_DRIVER (compile,
-		 array_init,
-		 fail_malloc,
-		 reset_after_fail,
-		 fail_realloc_null,
-		 reset_after_fail_realloc_null,
-		 fail_realloc,
-		 reset_after_fail_realloc,
-		 fail_malloc_reset,
-		 fail_realloc_null_reset,
-		 fail_realloc_reset,
-		 array_init_calloc,
-		 fail_calloc,
-		 reset_after_fail_calloc,
-		 fail_reallocarray_null,
-		 reset_after_fail_reallocarray_null,
-		 fail_reallocarray,
-		 reset_after_fail_reallocarray,
-		 fail_calloc_reset,
-		 fail_reallocarray_null_reset,
-		 fail_reallocarray_reset);
+MAIN_TEST_DRIVER ();
