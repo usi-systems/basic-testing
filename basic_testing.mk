@@ -44,7 +44,7 @@ PROGRAMS_DRIVERS := $(foreach prog,$(PROGRAMS),$(prog)$(PROGRAMS_DRIVERS_EXT))
 PROGRAMS_CWD := $(shell pwd)
 
 %-valgrind: %
-	echo -e '#!/bin/sh\nexec valgrind $(VALGRIND_FLAGS) -- "$${project_dir:-.}/$*" "$$@"' > $@
+	echo -e '#!/bin/sh\nexec valgrind $(VALGRIND_FLAGS) "$${project_dir:-.}/$*" "$$@"' > $@
 	chmod 755 $@
 
 TEST_DIAGNOSTICS=yes
