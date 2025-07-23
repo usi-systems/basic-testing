@@ -63,14 +63,15 @@
 #define BT_SKIP 2
 
 #define TEST_FAILED do {			\
-	if (bt_fork_tests)			\
-	    return BT_FAILURE;			\
-	else					\
+        if (bt_fork_tests) {			\
+            *bt_result = BT_FAILURE;		\
+	    return;				\
+        } else					\
 	    abort();				\
     } while(0)
 
-#define TEST_PASSED do { return (BT_SUCCESS); } while(0)
-#define TEST_SKIPPED do { return (BT_SKIP); } while(0)
+#define TEST_PASSED do { *bt_result = BT_SUCCESS; return; } while(0)
+#define TEST_SKIPPED do { *bt_result = BT_SKIP; return; } while(0)
 
 #if defined(__cpp_attributes) && defined(__has_cpp_attribute) && __has_cpp_attribute(maybe_unused)
 #define BT_POSSIBLY_UNUSED [[maybe_unused]]
@@ -731,7 +732,7 @@ void * __wrap_reallocarray (void * ptr, size_t nmemb, size_t size) {
 
 struct bt_test_descriptor {
     const char * name;
-    int (*test_function)();
+    void (*test_function)(int * result);
     const char * file;
     int line;
     struct bt_test_descriptor * next;
@@ -749,20 +750,20 @@ static int bt_add_test(struct bt_test_descriptor * t) {
 }
 
 #ifdef __cplusplus
-#define TEST(test_name)							\
-BT_POSSIBLY_UNUSED static int test_name ## _test ();					\
+#define TEST(test_name)									\
+BT_POSSIBLY_UNUSED static void test_name ## _test (int * bt_result);			\
 BT_POSSIBLY_UNUSED static struct bt_test_descriptor test_name ## _descr		\
     = { # test_name, test_name ## _test, __FILE__, __LINE__, 0};		\
 BT_POSSIBLY_UNUSED static struct bt_test_descriptor * test_name = & test_name ## _descr; \
 BT_POSSIBLY_UNUSED static const int test_name ## _init = bt_add_test(test_name);	\
-BT_POSSIBLY_UNUSED static int test_name ## _test ()
+BT_POSSIBLY_UNUSED static void test_name ## _test (int * bt_result)
 #else
 #define  TEST(test_name)						\
-BT_POSSIBLY_UNUSED static int test_name ## _test ();					\
+BT_POSSIBLY_UNUSED static void test_name ## _test (int * bt_result);			\
 BT_POSSIBLY_UNUSED static struct bt_test_descriptor test_name ## _descr		\
     = { # test_name, test_name ## _test, __FILE__, __LINE__, 0};		\
 BT_POSSIBLY_UNUSED static struct bt_test_descriptor * test_name = & test_name ## _descr; \
-BT_POSSIBLY_UNUSED static int test_name ## _test ()
+BT_POSSIBLY_UNUSED static void test_name ## _test (int * bt_result)
 #endif
 
 BT_POSSIBLY_UNUSED static unsigned int bt_fail_count = 0;
@@ -772,9 +773,10 @@ BT_POSSIBLY_UNUSED static unsigned int bt_skip_count = 0;
 BT_POSSIBLY_UNUSED
 static int bt_run_test(const struct bt_test_descriptor * t) {
     if (RUNNING_ON_VALGRIND || !bt_fork_tests) {
-	int result = t->test_function();
-	if (result == BT_FAILURE) return result;
-
+        int result = BT_SUCCESS;
+        t->test_function(&result);
+	if (result == BT_FAILURE) 
+	    return result;
 	if (bt_mem_table_failed) {
 	    printf("\nWARNING: Leakage test is disabled in %s\n", t->name);
 	    result = BT_FAILURE;
@@ -807,9 +809,10 @@ static int bt_run_test(const struct bt_test_descriptor * t) {
 	/* Child: Do the test. */
 	if (bt_timeout > 0)
 	    alarm(bt_timeout);
-	int result = t->test_function();
-	if (result == BT_FAILURE) exit(result);
-
+	int result = BT_SUCCESS;
+	t->test_function(&result);
+	if (result == BT_FAILURE)
+	    exit(result);
 	if (bt_mem_table_failed) {
 	    printf("\nWARNING: Leakage test is disabled in %s\n", t->name);
 	    result = BT_FAILURE;
