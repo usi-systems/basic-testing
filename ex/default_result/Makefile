@@ -1,3 +1,3 @@
-OBJECTS=processes.o
+OBJECTS=wcmp.o
 
 include ../../basic_testing.mk

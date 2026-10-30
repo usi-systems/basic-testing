@@ -1,0 +1,6 @@
+Running test 00_compile...                           PASS
+Running test 10_one_word...                          PASS
+Running test 20_one_word_plus_extra...               PASS
+Running test 30_many_words...                        PASS
+count_total=4 count_pass=4
+Summary: PASS  100% (4/4)
