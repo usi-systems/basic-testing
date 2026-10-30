@@ -823,6 +823,7 @@ static int bt_run_test(const struct bt_test_descriptor * t) {
 		result = BT_FAILURE;
 	    }
 	}
+	bt_mem_reset_allocator();
 	bt_mem_table_free();
 	exit(result);
     } else {
