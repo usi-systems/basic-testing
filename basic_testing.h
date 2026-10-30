@@ -750,7 +750,7 @@ static int bt_add_test(struct bt_test_descriptor * t) {
 }
 
 #define  TEST(test_name)					\
-BT_POSSIBLY_UNUSED static int test_name ## _test ();		\
+BT_POSSIBLY_UNUSED static void test_name ## _test (int * bt_result);		\
 BT_POSSIBLY_UNUSED static struct bt_test_descriptor test_name ## _descr		\
     = { # test_name, test_name ## _test, __FILE__, __LINE__, 0};		\
 BT_POSSIBLY_UNUSED static struct bt_test_descriptor * test_name = & test_name ## _descr; \
@@ -758,7 +758,7 @@ __attribute__((constructor)) static void test_name ## _register (void) { \
     *bt_last_test_p = test_name;					\
     bt_last_test_p = &(test_name->next);				\
 }									\
-BT_POSSIBLY_UNUSED static int test_name ## _test ()
+BT_POSSIBLY_UNUSED static void test_name ## _test (int * bt_result)
 
 BT_POSSIBLY_UNUSED static unsigned int bt_fail_count = 0;
 BT_POSSIBLY_UNUSED static unsigned int bt_pass_count = 0;
