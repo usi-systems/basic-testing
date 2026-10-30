@@ -268,16 +268,4 @@ TEST (map_insert_remove_series) {
 
 
 
-MAIN_TEST_DRIVER (compile,
-		 map_init,
-		 map_find_empty,
-		 map_insert,
-		 map_update,
-		 map_insert_collisions,
-		 map_update_collisions,
-		 map_free,
-		 map_remove,
-		 map_remove_not_found,
-		 map_remove_collisions,
-		 map_remove_collisions_not_found,
-		 map_insert_remove_series);
+MAIN_TEST_DRIVER ();

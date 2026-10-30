@@ -19,4 +19,4 @@ TEST (realloc_zero_size) {
 }
 
 
-MAIN_TEST_DRIVER (compile, realloc_zero_size);
+MAIN_TEST_DRIVER ();

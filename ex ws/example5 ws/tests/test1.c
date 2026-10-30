@@ -46,10 +46,4 @@ TEST(same_prefix2) {
     TEST_PASSED;
 }
 
-MAIN_TEST_DRIVER(two_empty,
-		 first_empty,
-		 second_empty,
-		 one_char_equal,
-		 same_string,
-		 same_prefix1,
-		 same_prefix2)
+MAIN_TEST_DRIVER()
